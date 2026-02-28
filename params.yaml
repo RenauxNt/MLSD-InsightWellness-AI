@@ -1,0 +1,3 @@
+data:
+  raw: gs://mlops-2026-ramzan1/raw/data_raw.csv
+  preprocessed: gs://mlops-2026-ramzan1/preprocessed/data_preprocessed.csv
