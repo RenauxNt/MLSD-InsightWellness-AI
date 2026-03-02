@@ -2,13 +2,11 @@ data:
   raw: gs://mlops-2026-ramzan1/raw/data_raw.csv
   preprocessed: gs://mlops-2026-ramzan1/preprocessed/data_preprocessed.csv
   train: gs://mlops-2026-ramzan1/splits/train.csv
-  validation: gs://mlops-2026-ramzan1/splits/validation.csv
   test: gs://mlops-2026-ramzan1/splits/test.csv
 
 split:
   target: Obesity
   test_size: 0.2
-  validation_size: 0.1
   random_state: 42
   stratify: true
 

@@ -22,6 +22,7 @@ params = yaml.safe_load(open("params.yaml", "r", encoding="utf-8"))
 # ---------------------------------------------------------------------------
 logger.info("Loading raw data from %s", params["data"]["raw"])
 raw_df = pd.read_csv(params["data"]["raw"])
+raw_df = raw_df.drop(columns=["Unnamed: 0"], errors="ignore")
 logger.info("Raw dataset: %d rows, %d columns", raw_df.shape[0], raw_df.shape[1])
 
 # ---------------------------------------------------------------------------

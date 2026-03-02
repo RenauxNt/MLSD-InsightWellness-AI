@@ -94,6 +94,7 @@ tracker = EmissionsTracker(
     save_to_file=True,
     gpu_ids=[],
     measure_power_secs=0.1,
+    log_level="error",
 )
 tracker.start()
 
@@ -102,14 +103,9 @@ tracker.start()
 # ---------------------------------------------------------------------------
 logger.info("Loading datasets …")
 Xtr, ytr = load_xy(D["train"])
-Xva, yva = load_xy(D["validation"])
+Xte, yte = load_xy(D["test"])
 
-Xte, yte = None, None
-if D.get("test"):
-    Xte, yte = load_xy(D["test"])
-    logger.info("Test set loaded: %d rows", Xte.shape[0])
-
-logger.info("Train: %d rows, %d features | Val: %d rows", Xtr.shape[0], Xtr.shape[1], Xva.shape[0])
+logger.info("Train: %d rows, %d features | Test: %d rows", Xtr.shape[0], Xtr.shape[1], Xte.shape[0])
 
 # ---------------------------------------------------------------------------
 # Model training
@@ -136,53 +132,33 @@ cv_scores = cross_val_score(clf, Xtr, ytr, cv=5, scoring="f1_macro", n_jobs=-1)
 logger.info("CV F1-macro: %.4f ± %.4f", cv_scores.mean(), cv_scores.std())
 
 # ---------------------------------------------------------------------------
-# Evaluation — validation set
+# Evaluation — test set
 # ---------------------------------------------------------------------------
-pva = clf.predict(Xva)
+pte = clf.predict(Xte)
 
 metrics: dict = {
-    "val_accuracy":        float(accuracy_score(yva, pva)),
-    "val_f1_macro":        float(f1_score(yva, pva, average="macro")),
-    "val_precision_macro": float(precision_score(yva, pva, average="macro")),
-    "val_recall_macro":    float(recall_score(yva, pva, average="macro")),
-    "cv_f1_macro_mean":    float(cv_scores.mean()),
-    "cv_f1_macro_std":     float(cv_scores.std()),
-    "train_duration_s":    round(train_duration_s, 2),
+    "test_accuracy":        float(accuracy_score(yte, pte)),
+    "test_f1_macro":        float(f1_score(yte, pte, average="macro")),
+    "test_precision_macro": float(precision_score(yte, pte, average="macro")),
+    "test_recall_macro":    float(recall_score(yte, pte, average="macro")),
+    "cv_f1_macro_mean":     float(cv_scores.mean()),
+    "cv_f1_macro_std":      float(cv_scores.std()),
+    "train_duration_s":     round(train_duration_s, 2),
 }
 
-# ---------------------------------------------------------------------------
-# Evaluation — test set (if available)
-# ---------------------------------------------------------------------------
-if Xte is not None:
-    pte = clf.predict(Xte)
-    metrics["test_accuracy"]        = float(accuracy_score(yte, pte))
-    metrics["test_f1_macro"]        = float(f1_score(yte, pte, average="macro"))
-    metrics["test_precision_macro"] = float(precision_score(yte, pte, average="macro"))
-    metrics["test_recall_macro"]    = float(recall_score(yte, pte, average="macro"))
-    logger.info("Test accuracy: %.4f | Test F1-macro: %.4f", metrics["test_accuracy"], metrics["test_f1_macro"])
+logger.info("Test accuracy: %.4f | Test F1-macro: %.4f", metrics["test_accuracy"], metrics["test_f1_macro"])
 
 # ---------------------------------------------------------------------------
 # Classification report & confusion matrix
 # ---------------------------------------------------------------------------
 classes = clf.classes_.tolist()
 
-# Validation
-val_report = classification_report(yva, pva, output_dict=True)
-val_report_path = REPORTS_DIR / "val_classification_report.json"
-with open(val_report_path, "w", encoding="utf-8") as f:
-    json.dump(val_report, f, indent=2)
+test_report = classification_report(yte, pte, output_dict=True)
+with open(REPORTS_DIR / "test_classification_report.json", "w", encoding="utf-8") as f:
+    json.dump(test_report, f, indent=2)
 
-cm = confusion_matrix(yva, pva, labels=classes)
-plot_confusion_matrix(cm, classes, REPORTS_DIR / "val_confusion_matrix.html")
-
-# Test (if available)
-if Xte is not None:
-    test_report = classification_report(yte, pte, output_dict=True)
-    with open(REPORTS_DIR / "test_classification_report.json", "w", encoding="utf-8") as f:
-        json.dump(test_report, f, indent=2)
-
-    cm_te = confusion_matrix(yte, pte, labels=classes)
-    plot_confusion_matrix(cm_te, classes, REPORTS_DIR / "test_confusion_matrix.html")
+cm_te = confusion_matrix(yte, pte, labels=classes)
+plot_confusion_matrix(cm_te, classes, REPORTS_DIR / "test_confusion_matrix.html")
 
 # ---------------------------------------------------------------------------
 # Save model artifacts
