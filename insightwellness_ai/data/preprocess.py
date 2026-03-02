@@ -43,11 +43,7 @@ text_columns = [
 for col in text_columns:
     if col in raw_df.columns:
         raw_df[col] = (
-            raw_df[col]
-            .astype("string")
-            .str.normalize("NFKC")
-            .str.strip()
-            .str.lower()
+            raw_df[col].astype("string").str.normalize("NFKC").str.strip().str.lower()
         )
 
 # ---------------------------------------------------------------------------
@@ -97,7 +93,9 @@ raw_df.drop(columns=["MTRANS_public_transportation"], inplace=True)
 # ---------------------------------------------------------------------------
 # Save
 # ---------------------------------------------------------------------------
-logger.info("Preprocessed dataset: %d rows, %d columns", raw_df.shape[0], raw_df.shape[1])
+logger.info(
+    "Preprocessed dataset: %d rows, %d columns", raw_df.shape[0], raw_df.shape[1]
+)
 raw_df.to_csv(params["data"]["preprocessed"], index=False)
 logger.info("Saved -> %s", params["data"]["preprocessed"])
 logger.info("Done.")

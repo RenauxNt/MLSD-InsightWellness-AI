@@ -6,7 +6,6 @@ from pathlib import Path
 from codecarbon import EmissionsTracker
 import altair as alt
 import joblib
-import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
@@ -52,7 +51,11 @@ def load_xy(fp: str):
 def plot_confusion_matrix(cm, classes, out_path: Path):
     """Save a confusion-matrix heatmap to *out_path* using Altair."""
     rows = [
-        {"True label": classes[i], "Predicted label": classes[j], "Count": int(cm[i][j])}
+        {
+            "True label": classes[i],
+            "Predicted label": classes[j],
+            "Count": int(cm[i][j]),
+        }
         for i in range(len(classes))
         for j in range(len(classes))
     ]
@@ -105,7 +108,12 @@ logger.info("Loading datasets …")
 Xtr, ytr = load_xy(D["train"])
 Xte, yte = load_xy(D["test"])
 
-logger.info("Train: %d rows, %d features | Test: %d rows", Xtr.shape[0], Xtr.shape[1], Xte.shape[0])
+logger.info(
+    "Train: %d rows, %d features | Test: %d rows",
+    Xtr.shape[0],
+    Xtr.shape[1],
+    Xte.shape[0],
+)
 
 # ---------------------------------------------------------------------------
 # Model training
@@ -137,16 +145,20 @@ logger.info("CV F1-macro: %.4f ± %.4f", cv_scores.mean(), cv_scores.std())
 pte = clf.predict(Xte)
 
 metrics: dict = {
-    "test_accuracy":        float(accuracy_score(yte, pte)),
-    "test_f1_macro":        float(f1_score(yte, pte, average="macro")),
+    "test_accuracy": float(accuracy_score(yte, pte)),
+    "test_f1_macro": float(f1_score(yte, pte, average="macro")),
     "test_precision_macro": float(precision_score(yte, pte, average="macro")),
-    "test_recall_macro":    float(recall_score(yte, pte, average="macro")),
-    "cv_f1_macro_mean":     float(cv_scores.mean()),
-    "cv_f1_macro_std":      float(cv_scores.std()),
-    "train_duration_s":     round(train_duration_s, 2),
+    "test_recall_macro": float(recall_score(yte, pte, average="macro")),
+    "cv_f1_macro_mean": float(cv_scores.mean()),
+    "cv_f1_macro_std": float(cv_scores.std()),
+    "train_duration_s": round(train_duration_s, 2),
 }
 
-logger.info("Test accuracy: %.4f | Test F1-macro: %.4f", metrics["test_accuracy"], metrics["test_f1_macro"])
+logger.info(
+    "Test accuracy: %.4f | Test F1-macro: %.4f",
+    metrics["test_accuracy"],
+    metrics["test_f1_macro"],
+)
 
 # ---------------------------------------------------------------------------
 # Classification report & confusion matrix
@@ -186,7 +198,10 @@ fi_path = model_dir / "feature_importances.json"
 try:
     importances = clf.feature_importances_
     fi = sorted(
-        [{"feature": feat, "importance": float(imp)} for feat, imp in zip(Xtr.columns, importances)],
+        [
+            {"feature": feat, "importance": float(imp)}
+            for feat, imp in zip(Xtr.columns, importances)
+        ],
         key=lambda x: x["importance"],
         reverse=True,
     )
