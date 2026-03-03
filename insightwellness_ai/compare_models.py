@@ -83,7 +83,9 @@ for name, model in models.items():
     results[name] = {
         "test_accuracy": round(float(accuracy_score(yte, pte)), 4),
         "test_f1_macro": round(float(f1_score(yte, pte, average="macro")), 4),
-        "test_precision_macro": round(float(precision_score(yte, pte, average="macro")), 4),
+        "test_precision_macro": round(
+            float(precision_score(yte, pte, average="macro")), 4
+        ),
         "test_recall_macro": round(float(recall_score(yte, pte, average="macro")), 4),
         "cv_f1_macro_mean": round(float(cv_scores.mean()), 4),
         "cv_f1_macro_std": round(float(cv_scores.std()), 4),
