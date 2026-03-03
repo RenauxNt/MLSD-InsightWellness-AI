@@ -30,6 +30,7 @@ InsightWellness-AI/
 
 ## Documentation
 
+- [Dataset Card](docs/DATASET_CARD.md) — Dataset description, sources, bias and limitations
 - [EDA](docs/exploratory_data_analysis_documentation.md) — Dataset analysis and feature descriptions
 - [Experimentation](docs/EXPERIMENTATION.md) — Model choice, training results and feature importances
 

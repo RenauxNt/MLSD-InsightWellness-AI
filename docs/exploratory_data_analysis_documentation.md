@@ -1,65 +1,50 @@
-# Exploratory_data_analysis_documentation
+# Exploratory Data Analysis
 
-## 1. Dataset Background
+> For full dataset description, sources, and limitations see [DATASET_CARD.md](DATASET_CARD.md).
 
-This dataset was created to support the automated estimation of obesity levels based on individuals eating habits and physical condition. Data was collected from individuals in Mexico, Peru, and Colombia via a web survey. To expand the dataset, **77% of the records were synthetically generated using the SMOTE (Synthetic Minority Oversampling Technique)** algorithm. Only 23% are original survey responses.
+## 1. Data Quality
 
-| Property | Value |
-|---|---|
-| Total records | 2,111 |
-| Features | 16 (+ 1 target) |
-| Task type | Multi-class classification |
-| Classes | 7 |
-| Missing values | 0 |
-| Duplicate rows | 24 |
-| Synthetic portion | ~77% (SMOTE) |
-| Countries | Mexico, Peru, Colombia |
+### Missing Values
+
+No missing values were detected across any column.
+
+### Duplicate Records
+
+24 duplicate rows were detected (1.14%). These were kept as they are likely a result of the SMOTE oversampling process rather than data entry errors.
+
+### Numeric Sanity Check
+
+All numerical values fall within plausible ranges. No negative values detected.
 
 ---
 
 ## 2. Variable Description
 
-| Variable Name | Role | Type | Demographic | Description | Units | Missing Values |
-|---------------|------|------|-------------|-------------|-------|----------------|
-| Gender | Feature | Categorical | Gender |  |  | No |
-| Age | Feature | Continuous | Age |  |  | No |
-| Height | Feature | Continuous |  |  |  | No |
-| Weight | Feature | Continuous |  |  |  | No |
-| family_history_with_overweight | Feature | Binary |  | Has a family member suffered or suffers from overweight? |  | No |
-| FAVC | Feature | Binary |  | Do you eat high caloric food frequently? |  | No |
-| FCVC | Feature | Integer |  | Do you usually eat vegetables in your meals? |  | No |
-| NCP | Feature | Continuous |  | How many main meals do you have daily? |  | No |
-| CAEC | Feature | Categorical |  | Do you eat any food between meals? |  | No |
-| SMOKE | Feature | Binary |  | Do you smoke? |  | No |
-| CH2O | Feature | Continuous |  | How much water do you drink daily? |  | No |
-| SCC | Feature | Binary |  | Do you monitor the calories you eat daily? |  | No |
-| FAF | Feature | Continuous |  | How often do you have physical activity? |  | No |
-| TUE | Feature | Integer |  | How much time do you use technological devices? |  | No |
-| CALC | Feature | Categorical |  | How often do you drink alcohol? |  | No |
-| MTRANS | Feature | Categorical |  | Which transportation do you usually use? |  | No |
-| NObeyesdad | Target | Categorical |  | Obesity level |  | No |
+| Variable | Type | Description |
+|----------|------|-------------|
+| Gender | Categorical (binary) | Male / Female |
+| Age | Continuous | Age in years |
+| Height | Continuous | Height in meters |
+| Weight | Continuous | Weight in kilograms |
+| family_history_with_overweight | Binary | Family member with overweight history |
+| FAVC | Binary | Frequent consumption of high-caloric food |
+| FCVC | Integer | Frequency of vegetable consumption (1–3) |
+| NCP | Continuous | Number of main meals per day |
+| CAEC | Ordinal | Food consumption between meals (No / Sometimes / Frequently / Always) |
+| SMOKE | Binary | Smoker |
+| CH2O | Continuous | Daily water intake (1–3) |
+| SCC | Binary | Monitors daily calorie intake |
+| FAF | Continuous | Physical activity frequency (0–3) |
+| TUE | Integer | Daily technology use in hours (0–2) |
+| CALC | Ordinal | Alcohol consumption frequency (No / Sometimes / Frequently / Always) |
+| MTRANS | Categorical | Transportation method |
+| NObeyesdad | Target | Obesity level (7 classes) |
 
 ---
 
-## 3. Data Quality
+## 3. Target Variable
 
-### Missing Values
-
-No missing values were detected across any column
-
-### Duplicate Records
-
-24 duplicate rows were detected (1.14%).
-
-### Numeric Sanity Check
-
-All numerical values fall within plausible ranges. No negative values.
-
-## 4. Target Variable
-
-### Class Labels
-
-The target variable `NObeyesdad` contains 7 classes.
+The dataset is approximately balanced across the 7 classes, which is a result of the SMOTE oversampling applied during dataset creation.
 
 ```
 Insufficient_Weight    272
@@ -71,23 +56,18 @@ Obesity_Type_II        297
 Obesity_Type_III       324
 ```
 
-### Class Balance
+---
 
-The dataset is approximately balanced across the 7 classes.
-
-
-## 5. Correlation
+## 4. Correlation
 
 ![Correlation Matrix](../reports/figures/correlation.png)
 
+Weight is strongly correlated with the target, as expected. Height and Age show moderate correlations. Lifestyle features (FCVC, FAF, CH2O) show weaker but meaningful correlations with obesity level.
 
-## 6. Pairplot
+---
+
+## 5. Pairplot
 
 ![Pairplot](../reports/figures/pairplot.png)
 
-## 7. Limitations
-
-- Data is self-reported.
-- 77% of the records were synthetically generated.
-- Limited geographically
-- Models trained on this dataset may oversimplify complex health conditions.
+The pairplot confirms that Weight and Height are the most visually separating features across obesity classes. Lifestyle features show more overlap between classes, suggesting they contribute incrementally rather than being individually decisive.
