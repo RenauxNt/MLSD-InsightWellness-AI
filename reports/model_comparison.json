@@ -1,0 +1,26 @@
+{
+    "DecisionTree": {
+        "test_accuracy": 0.922,
+        "test_f1_macro": 0.9191,
+        "test_precision_macro": 0.9216,
+        "test_recall_macro": 0.9181,
+        "cv_f1_macro_mean": 0.9112,
+        "cv_f1_macro_std": 0.0085
+    },
+    "RandomForest": {
+        "test_accuracy": 0.9456,
+        "test_f1_macro": 0.9449,
+        "test_precision_macro": 0.952,
+        "test_recall_macro": 0.9439,
+        "cv_f1_macro_mean": 0.9433,
+        "cv_f1_macro_std": 0.0043
+    },
+    "GradientBoosting": {
+        "test_accuracy": 0.9645,
+        "test_f1_macro": 0.9633,
+        "test_precision_macro": 0.9659,
+        "test_recall_macro": 0.9628,
+        "cv_f1_macro_mean": 0.9618,
+        "cv_f1_macro_std": 0.0093
+    }
+}
