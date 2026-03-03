@@ -1,78 +1,78 @@
 [
   {
     "feature": "Weight",
-    "importance": 0.31847542625391245
-  },
-  {
-    "feature": "FCVC",
-    "importance": 0.10222116709255198
+    "importance": 0.5194135920268379
   },
   {
     "feature": "Height",
-    "importance": 0.09630762411059579
+    "importance": 0.17039506426595852
   },
   {
-    "feature": "Age",
-    "importance": 0.09453236096853586
-  },
-  {
-    "feature": "NCP",
-    "importance": 0.05227799498074745
-  },
-  {
-    "feature": "TUE",
-    "importance": 0.049456601469451786
+    "feature": "FCVC",
+    "importance": 0.09089156301825747
   },
   {
     "feature": "Gender",
-    "importance": 0.04931705162742506
+    "importance": 0.0720292474826905
   },
   {
-    "feature": "FAF",
-    "importance": 0.046672645099370774
-  },
-  {
-    "feature": "CH2O",
-    "importance": 0.0465651728205566
-  },
-  {
-    "feature": "CAEC",
-    "importance": 0.03676891920628878
+    "feature": "Age",
+    "importance": 0.03812700101973603
   },
   {
     "feature": "CALC",
-    "importance": 0.030907787918320946
+    "importance": 0.026571265548360864
   },
   {
-    "feature": "family_history_with_overweight",
-    "importance": 0.030818286319328807
+    "feature": "CH2O",
+    "importance": 0.023163057500158353
+  },
+  {
+    "feature": "CAEC",
+    "importance": 0.011506656786778615
+  },
+  {
+    "feature": "NCP",
+    "importance": 0.011068926028484218
+  },
+  {
+    "feature": "FAF",
+    "importance": 0.010812242829456222
   },
   {
     "feature": "FAVC",
-    "importance": 0.018193115717958046
+    "importance": 0.010336003905933483
   },
   {
-    "feature": "MTRANS_automobile",
-    "importance": 0.014433264950850212
+    "feature": "TUE",
+    "importance": 0.009375267811914875
   },
   {
     "feature": "SCC",
-    "importance": 0.005809783379542744
+    "importance": 0.0016674558961700784
+  },
+  {
+    "feature": "MTRANS_automobile",
+    "importance": 0.001658895907458604
   },
   {
     "feature": "MTRANS_walking",
-    "importance": 0.0035125602350835378
+    "importance": 0.0016270323372616906
   },
   {
     "feature": "SMOKE",
-    "importance": 0.002485006839770762
+    "importance": 0.0006226073730443887
+  },
+  {
+    "feature": "family_history_with_overweight",
+    "importance": 0.0004934046176274681
   },
   {
     "feature": "MTRANS_motorbike",
-    "importance": 0.0007975052799823291
+    "importance": 0.0002243452556573464
   },
   {
     "feature": "MTRANS_bike",
-    "importance": 0.0004477257297262066
+    "importance": 1.6370388213364596e-05
   }
 ]

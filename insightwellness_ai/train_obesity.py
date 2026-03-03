@@ -7,7 +7,7 @@ from codecarbon import EmissionsTracker
 import altair as alt
 import joblib
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -16,7 +16,7 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
 )
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV, cross_val_score
 import yaml
 
 # ---------------------------------------------------------------------------
@@ -116,16 +116,39 @@ logger.info(
 )
 
 # ---------------------------------------------------------------------------
-# Model training
+# Hyperparameter tuning (GridSearchCV)
 # ---------------------------------------------------------------------------
-logger.info("Training RandomForestClassifier …")
+logger.info("Running GridSearchCV for GradientBoostingClassifier …")
+
+base_clf = GradientBoostingClassifier(
+    n_estimators=T["n_estimators"],
+    random_state=T["random_state"],
+)
+
+grid_search = GridSearchCV(
+    estimator=base_clf,
+    param_grid=T["param_grid"],
+    scoring="f1_macro",
+    cv=5,
+    n_jobs=-1,
+    verbose=1,
+)
+grid_search.fit(Xtr, ytr)
+
+best_params = grid_search.best_params_
+logger.info("Best params: %s", best_params)
+logger.info("Best CV F1-macro: %.4f", grid_search.best_score_)
+
+# ---------------------------------------------------------------------------
+# Final model training with best params
+# ---------------------------------------------------------------------------
+logger.info("Training final GradientBoostingClassifier with best params …")
 t0 = time.perf_counter()
 
-clf = RandomForestClassifier(
+clf = GradientBoostingClassifier(
     n_estimators=T["n_estimators"],
-    max_depth=T["max_depth"],
     random_state=T["random_state"],
-    n_jobs=-1,
+    **best_params,
 )
 clf.fit(Xtr, ytr)
 
@@ -152,6 +175,7 @@ metrics: dict = {
     "cv_f1_macro_mean": float(cv_scores.mean()),
     "cv_f1_macro_std": float(cv_scores.std()),
     "train_duration_s": round(train_duration_s, 2),
+    "best_params": best_params,
 }
 
 logger.info(
