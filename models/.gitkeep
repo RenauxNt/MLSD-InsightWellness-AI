@@ -1,0 +1,8 @@
+import yaml
+import pandas as pd
+from pathlib import Path
+
+
+if __name__ == "__main__":
+    raw_df = pd.read_csv(yaml.safe_load(open("params.yaml"))["data"]["raw"])
+    print("test")

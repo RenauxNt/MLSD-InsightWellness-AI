@@ -1,0 +1,78 @@
+[
+  {
+    "feature": "Weight",
+    "importance": 0.5194135920268379
+  },
+  {
+    "feature": "Height",
+    "importance": 0.17039506426595852
+  },
+  {
+    "feature": "FCVC",
+    "importance": 0.09089156301825747
+  },
+  {
+    "feature": "Gender",
+    "importance": 0.0720292474826905
+  },
+  {
+    "feature": "Age",
+    "importance": 0.03812700101973603
+  },
+  {
+    "feature": "CALC",
+    "importance": 0.026571265548360864
+  },
+  {
+    "feature": "CH2O",
+    "importance": 0.023163057500158353
+  },
+  {
+    "feature": "CAEC",
+    "importance": 0.011506656786778615
+  },
+  {
+    "feature": "NCP",
+    "importance": 0.011068926028484218
+  },
+  {
+    "feature": "FAF",
+    "importance": 0.010812242829456222
+  },
+  {
+    "feature": "FAVC",
+    "importance": 0.010336003905933483
+  },
+  {
+    "feature": "TUE",
+    "importance": 0.009375267811914875
+  },
+  {
+    "feature": "SCC",
+    "importance": 0.0016674558961700784
+  },
+  {
+    "feature": "MTRANS_automobile",
+    "importance": 0.001658895907458604
+  },
+  {
+    "feature": "MTRANS_walking",
+    "importance": 0.0016270323372616906
+  },
+  {
+    "feature": "SMOKE",
+    "importance": 0.0006226073730443887
+  },
+  {
+    "feature": "family_history_with_overweight",
+    "importance": 0.0004934046176274681
+  },
+  {
+    "feature": "MTRANS_motorbike",
+    "importance": 0.0002243452556573464
+  },
+  {
+    "feature": "MTRANS_bike",
+    "importance": 1.6370388213364596e-05
+  }
+]
