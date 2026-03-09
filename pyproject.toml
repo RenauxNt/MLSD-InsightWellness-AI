@@ -1,20 +1,8 @@
-[build-system]
-requires = ["flit_core >=3.2,<4"]
-build-backend = "flit_core.buildapi"
-
 [project]
 name = "insightwellness_ai"
 version = "0.0.1"
 description = "A short description of the project."
-authors = [
-  { name = "Your name (or your organization/company/team)" },
-]
-license = { file = "LICENSE" }
 readme = "README.md"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License"
-]
 dependencies = [
     "altair>=6.0.0",
     "codecarbon>=3.2.3",
