@@ -6,6 +6,8 @@
 
 This dataset contains survey data collected from individuals in Mexico, Peru, and Colombia to estimate obesity levels based on eating habits and physical condition. It includes 2,111 rows and 17 columns with demographic, dietary, and lifestyle features, along with a categorical target variable for obesity levels.
 
+You can see more details of the EDA and more plots in notebooks/exploratory_data_analysis.ipynb.
+
 ### Dataset Details
 
 This dataset was introduced by **Palechor & de la Hoz Manotas (2019)** and published in *Data in Brief*.
@@ -54,14 +56,16 @@ Obesity_Type_II        297
 Obesity_Type_III       324
 ```
 
+### Milestone 1 feedback.
+
+The model relied almost entirely on weight (See milestone1.pdf in milestone/). The model's utility was unclear because a simple BMI rule could categorize a person. We took that feedback into account and decided to remove the weight and the height features. The project switch to an early warning system for obesity based only on lifestyle. The BMI rule only detect obesity after the weight gain has occurred. The goal of our approach is to detect persons at risk before the weight gain.
+
 ### Feature overview
 
 | Variable | Type | Description |
 |----------|------|-------------|
 | Gender | Categorical (binary) | Male / Female |
 | Age | Continuous | Age in years |
-| Height | Continuous | Height in meters |
-| Weight | Continuous | Weight in kilograms |
 | family_history_with_overweight | Binary | Family member with overweight history |
 | FAVC | Binary | Frequent consumption of high-caloric food |
 | FCVC | Integer | Frequency of vegetable consumption (1–3) |
@@ -99,15 +103,13 @@ All numerical values fall within plausible ranges. No negative values detected.
 
 ![Correlation Matrix](./figures/correlation.png)
 
-Weight is strongly correlated with the target, as expected. Height and Age show moderate correlations. Lifestyle features (FCVC, FAF, CH2O) show weaker but meaningful correlations with obesity level.
-
+After removing weight and height, family history of overweight (0.51) has become the predominant factor.
 ---
 
 ## 5. Pairplot
 
 ![Pairplot](./figures/pairplot.png)
 
-The pairplot confirms that Weight and Height are the most visually separating features across obesity classes. Lifestyle features show more overlap between classes, suggesting they contribute incrementally rather than being individually decisive.
 
 ## 6. Bias, Risks, and Limitations
 
