@@ -17,7 +17,7 @@ Target variable: `Obesity` (7 classes: Insufficient_Weight, Normal_Weight, Overw
 | Test  | 20%  | Stratified split (random_state=257) |
 
 Stratification was used to preserve class balance across splits.
-Data is stored and read from Google Cloud Storage (`gs://mlops-2026-ramzan1/`).
+Data is stored and read from Big Query.
 
 ---
 
@@ -29,19 +29,19 @@ Three models were evaluated to select the best approach. Each model was trained 
 
 | Model             | Accuracy | F1-macro | CV F1 mean | CV F1 std |
 |-------------------|----------|----------|------------|-----------|
-| Decision Tree     | 92.43%   | 92.23%   | 91.81%     | ±1.32%    |
-| Random Forest     | 93.62%   | 93.53%   | 94.26%     | ±0.73%    |
-| Gradient Boosting | **95.98%** | **95.84%** | **96.07%** | ±1.36% |
+| Decision Tree     | 76.83%   | 76.51%   | 68.73%     | ±5.45%    |
+| Random Forest     | 68.79%   | 66.78%   | 63.73%     | ±4.46%    |
+| Gradient Boosting | **81.56%** | **81.50%** | **76.88%** | ±5.57% |
 
 ### Results (random_state=257)
 
 | Model             | Accuracy | F1-macro | CV F1 mean | CV F1 std |
 |-------------------|----------|----------|------------|-----------|
-| Decision Tree     | 92.20%   | 91.91%   | 91.12%     | ±0.85%    |
-| Random Forest     | 94.56%   | 94.49%   | 94.33%     | ±0.43%    |
-| Gradient Boosting | **96.45%** | **96.33%** | **96.18%** | ±0.93% |
+| Decision Tree     | 77.07%   | 76.62%   | 68.54%     | ±4.76%    |
+| Random Forest     | 68.32%   | 66.05%   | 63.48%     | ±3.94%    |
+| Gradient Boosting | **81.80%** | **81.74%** | **77.64%** | ±5.45% |
 
-**Gradient Boosting consistently outperforms the other two models across both random states**, with a ~2% improvement in F1-macro over Random Forest and ~4% over Decision Tree.
+**Gradient Boosting consistently outperforms the other two models across both random states**.
 
 ---
 
@@ -64,8 +64,8 @@ A grid search with 5-fold cross-validation was run over the following grid:
 | Parameter     | Value |
 |---------------|-------|
 | n_estimators  | 500   |
-| max_depth     | 5     |
-| learning_rate | 0.05  |
+| max_depth     | 7     |
+| learning_rate | 0.02  |
 
 ---
 
@@ -75,47 +75,64 @@ A grid search with 5-fold cross-validation was run over the following grid:
 
 | Metric              | Value  |
 |---------------------|--------|
-| Accuracy            | 95.51% |
-| F1-score (macro)    | 95.38% |
-| Precision (macro)   | 95.70% |
-| Recall (macro)      | 95.33% |
+| Accuracy            | 83.92% |
+| F1-score (macro)    | 83.98% |
+| Precision (macro)   | 84.29% |
+| Recall (macro)      | 84.02% |
 
 ### Cross-Validation (5-fold, on training set)
 
 | Metric            | Value      |
 |-------------------|------------|
-| F1-macro mean     | 96.73%     |
-| F1-macro std      | ±0.70%     |
-
-The low standard deviation confirms the model generalises well across different data splits.
-
-### Training Time
-
-| Metric         | Value   |
-|----------------|---------|
-| Training time  | 14.45 s |
+| F1-macro mean     | 78.89%     |
+| F1-macro std      | ±4.9%     |
 
 ---
 
 ## 6. Feature Importances
 
-| Rank | Feature                        | Importance |
-|------|--------------------------------|------------|
-| 1    | Weight                         | 51.94%     |
-| 2    | Height                         | 17.04%     |
-| 3    | FCVC (vegetable consumption)   | 9.09%      |
-| 4    | Gender                         | 7.20%      |
-| 5    | Age                            | 3.81%      |
-| 6    | CALC (alcohol consumption)     | 2.66%      |
-| 7    | CH2O (water intake)            | 2.32%      |
-| 8    | CAEC (food between meals)      | 1.15%      |
-| 9    | NCP (number of main meals)     | 1.11%      |
-| 10   | FAF (physical activity freq.)  | 1.08%      |
+| Rank | Feature                              | Importance |
+|------|--------------------------------------|------------|
+| 1    | Age                                  | 17.71%     |
+| 2    | FCVC (vegetable consumption)         | 15.32%     |
+| 3    | TUE (technology use)                 | 13.11%     |
+| 4    | NCP (number of main meals)           | 8.74%      |
+| 5    | FAF (physical activity frequency)    | 8.53%      |
+| 6    | CH2O (water intake)                  | 7.75%      |
+| 7    | Gender                               | 7.36%      |
+| 8    | CAEC (food between meals)            | 6.45%      |
+| 9    | family_history_with_overweight       | 4.67%      |
+| 10   | CALC (alcohol consumption)           | 4.08%      |
+| 11   | FAVC (high-calorie food consumption) | 2.55%      |
+| 12   | MTRANS_automobile                    | 1.45%      |
+| 13   | SCC (calorie monitoring)             | 0.84%      |
+| 14   | MTRANS_walking                       | 0.69%      |
+| 15   | SMOKE                                | 0.49%      |
+| 16   | MTRANS_bike                          | 0.15%      |
+| 17   | MTRANS_motorbike                     | 0.11%      |
 
-Weight and Height together account for ~69% of the model's decisions, which is expected for obesity classification. Lifestyle features contribute the remaining importance.
+## 7. Permutation Feature Importances
+
+| Rank | Feature                              | Importance |
+|------|--------------------------------------|------------|
+| 1    | Age                                  | 23.33%     |
+| 2    | FCVC (vegetable consumption)         | 18.37%     |
+| 3    | Gender                               | 17.54%     |
+| 4    | TUE (technology use)                 | 12.67%     |
+| 5    | NCP (number of main meals)           | 10.09%     |
+| 6    | FAF (physical activity frequency)    | 6.88%      |
+| 7    | family_history_with_overweight       | 6.62%      |
+| 8    | CH2O (water intake)                  | 5.98%      |
+| 9    | CALC (alcohol consumption)           | 4.82%      |
+| 10   | CAEC (food between meals)            | 3.22%      |
+| 11   | FAVC (high-calorie food consumption) | 2.36%      |
+| 12   | MTRANS_automobile                    | 2.29%      |
+| 13   | SCC (calorie monitoring)             | 1.04%      |
+| 14   | MTRANS_motorbike                     | 0.24%      |
+| 15   | SMOKE                                | 0.07%      |
+| 16   | MTRANS_walking                       | 0.02%      |
+| 17   | MTRANS_bike                          | 0.00%      |
+
+Compared to the tree-based feature importance gender is much higher now. Overall age, vegetable consumption, technology use, gender and number of main meals are the most impactful features. After that, physical activity frequency, family history with overweight, food between meals and water intake have all importance above 5%. The rest all have importance below 5%.
 
 ---
-
-## 7. Carbon Emissions
-
-Training emissions were tracked using [CodeCarbon](https://codecarbon.io/). Results are stored in `reports/emissions.csv`.

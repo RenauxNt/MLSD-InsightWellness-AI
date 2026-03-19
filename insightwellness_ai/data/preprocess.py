@@ -3,6 +3,9 @@ import logging
 import pandas as pd
 import yaml
 
+from google.cloud import bigquery
+from sklearn.model_selection import train_test_split
+
 # ---------------------------------------------------------------------------
 # Logging setup
 # ---------------------------------------------------------------------------
@@ -24,6 +27,9 @@ logger.info("Loading raw data from %s", params["data"]["raw"])
 raw_df = pd.read_csv(params["data"]["raw"])
 raw_df = raw_df.drop(columns=["Unnamed: 0"], errors="ignore")
 logger.info("Raw dataset: %d rows, %d columns", raw_df.shape[0], raw_df.shape[1])
+
+raw_df = raw_df.drop(columns=["Weight", "Height"], errors="ignore")
+logger.info("Dropped columns: %s", ["Weight", "Height"])
 
 # ---------------------------------------------------------------------------
 # Text normalisation
@@ -99,3 +105,46 @@ logger.info(
 raw_df.to_csv(params["data"]["preprocessed"], index=False)
 logger.info("Saved -> %s", params["data"]["preprocessed"])
 logger.info("Done.")
+
+
+logger.info("Splitting dataset...")
+
+bq_client = bigquery.Client(project=params["bq"]["project_id"])
+
+
+def upload_to_bq(df, table_name):
+    job_config = bigquery.LoadJobConfig(write_disposition="WRITE_TRUNCATE")
+    table_id = f"{params['bq']['bq_dataset']}.{table_name}"
+
+    job = bq_client.load_table_from_dataframe(df, table_id, job_config=job_config)
+    job.result()
+
+    logger.info("Uploaded to %s", table_id)
+
+
+X = raw_df.drop(columns=["Obesity"])
+y = raw_df["Obesity"]
+
+logger.info(
+    "Dataset: %d rows, %d features, target=%s", len(raw_df), X.shape[1], "Obesity"
+)
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=params["split"]["test_size"],
+    random_state=params["split"]["random_state"],
+    stratify=y if params["split"]["stratify"] else None,
+)
+
+train_df = pd.concat([X_train, y_train], axis=1)
+test_df = pd.concat([X_test, y_test], axis=1)
+
+logger.info("Train: %s | Test: %s", train_df.shape, test_df.shape)
+
+logger.info("Uploading datasets to BigQuery...")
+
+upload_to_bq(train_df, params["bq"]["train_table"])
+upload_to_bq(test_df, params["bq"]["test_table"])
+
+logger.info("Preprocessing completed successfully.")

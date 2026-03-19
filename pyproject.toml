@@ -6,15 +6,17 @@ readme = "README.md"
 dependencies = [
     "altair>=6.0.0",
     "codecarbon>=3.2.3",
+    "db-dtypes>=1.5.0",
     "fsspec>=2026.2.0",
     "gcsfs>=2026.2.0",
+    "google-cloud-bigquery>=3.40.1",
     "joblib>=1.5.3",
     "numpy>=2.2.6",
     "pandas>=2.3.3",
     "pyyaml>=6.0.3",
     "scikit-learn>=1.7.2",
 ]
-requires-python = "~=3.10.0"
+requires-python = ">=3.11"
 
 [dependency-groups]
 dev = [
