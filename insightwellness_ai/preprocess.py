@@ -1,20 +1,13 @@
 import pandas as pd
 import logging
-
 from sklearn.model_selection import train_test_split
 
 logger = logging.getLogger(__name__)
 
 
-def preprocess_data(
-    raw_df: pd.DataFrame, test_size: float, random_state: int, stratify: bool
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    logger.info("Starting preprocessing...")
-    logger.info("Raw dataset: %d rows, %d columns", raw_df.shape[0], raw_df.shape[1])
-
+def preprocess_data(raw_df, test_size, random_state, stratify):
     raw_df = raw_df.drop(columns=["Unnamed: 0"], errors="ignore")
     raw_df = raw_df.drop(columns=["Weight", "Height"], errors="ignore")
-    logger.info("Dropped columns: %s", ["Weight", "Height"])
 
     text_columns = [
         "CAEC",
@@ -30,13 +23,7 @@ def preprocess_data(
 
     for col in text_columns:
         if col in raw_df.columns:
-            raw_df[col] = (
-                raw_df[col]
-                .astype("string")
-                .str.normalize("NFKC")
-                .str.strip()
-                .str.lower()
-            )
+            raw_df[col] = raw_df[col].astype("string").str.strip().str.lower()
 
     caec_calc_mapping = {"no": 0, "sometimes": 1, "frequently": 2, "always": 3}
     for col in ["CAEC", "CALC"]:
@@ -63,7 +50,7 @@ def preprocess_data(
     gender_mapping = {"male": 0, "female": 1}
     raw_df["Gender"] = raw_df["Gender"].map(gender_mapping).astype("Int64")
 
-    binary_mapping = {"yes": 1, "no": 0}
+    binary_mapping = {"true": 1, "false": 0}
     for col in ["family_history_with_overweight", "FAVC", "SMOKE", "SCC"]:
         raw_df[col] = raw_df[col].map(binary_mapping).astype("Int64")
 
