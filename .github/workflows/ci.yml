@@ -24,6 +24,7 @@ jobs:
 
             - name: Run pre-commit hooks
               run: |
+                uv pip install -e .
                 uv run pre-commit run --all-files
 
     pytest:
@@ -47,4 +48,5 @@ jobs:
 
             - name: Run tests
               run: |
+                uv pip install -e .
                 uv run pytest tests/
