@@ -5,18 +5,26 @@ description = "A short description of the project."
 readme = "README.md"
 dependencies = [
     "altair>=6.0.0",
-    "codecarbon>=3.2.3",
     "db-dtypes>=1.5.0",
     "fsspec>=2026.2.0",
     "gcsfs>=2026.2.0",
+    "google-auth>=2.49.1",
+    "google-cloud-aiplatform>=1.142.0",
     "google-cloud-bigquery>=3.40.1",
+    "google-cloud-bigquery-storage>=2.36.2",
+    "google-cloud-storage>=3.10.0",
     "joblib>=1.5.3",
+    "kfp>=2.16.0",
+    "matplotlib>=3.10.8",
     "numpy>=2.2.6",
     "pandas>=2.3.3",
     "pyyaml>=6.0.3",
     "scikit-learn>=1.7.2",
 ]
 requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+where = ["."]
 
 [dependency-groups]
 dev = [

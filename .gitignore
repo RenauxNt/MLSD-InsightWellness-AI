@@ -4,3 +4,5 @@ __pycache__
 .python-version
 .pytest_cache
 .ruff_cache
+*.json
+insightwellness_ai.egg-info
