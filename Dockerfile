@@ -1,19 +1,21 @@
-FROM mirror.gcr.io/library/python:3.11-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
 # Install UV
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Copy dependency files
 COPY pyproject.toml uv.lock ./
 
+RUN uv sync --frozen --no-dev --no-install-project
 
-# Install dependencies system-wide (no venv: this is a base image for pipeline components)
-RUN uv export --frozen --no-dev --no-hashes -o /tmp/requirements.txt && \
-    uv pip install --system -r /tmp/requirements.txt
+COPY insightwellness_ai/api/app.py .
 
-COPY insightwellness_ai/ insightwellness_ai/
-RUN uv pip install --system .
+COPY models/ ./models/
 
-ENTRYPOINT ["bash"]
+# Add the virtual environment to PATH so Python knows where your packages are
+ENV PATH="/app/.venv/bin:$PATH"
+
+EXPOSE 8080
+
+CMD ["uv", "run", "flask", "--app", "app", "run", "--host=0.0.0.0", "--port=8080"]
