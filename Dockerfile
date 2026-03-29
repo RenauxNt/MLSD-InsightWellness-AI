@@ -13,9 +13,9 @@ COPY insightwellness_ai/api/app.py .
 
 COPY models/ ./models/
 
-# Add the virtual environment to PATH so Python knows where your packages are
+# Add the virtual environment to PATH
 ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8080
 
-CMD ["uv", "run", "flask", "--app", "app", "run", "--host=0.0.0.0", "--port=8080"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--threads", "8", "--timeout", "0", "app:app"]

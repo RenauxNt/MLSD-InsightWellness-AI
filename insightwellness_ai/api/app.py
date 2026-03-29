@@ -122,13 +122,17 @@ def predict():
         ordered_input = {f: data[f] for f in FEATURE_ORDER}
         input_df = pd.DataFrame([ordered_input], columns=FEATURE_ORDER)
         
-        prediction = model.predict(input_df).tolist()[0]
-        probabilities = model.predict_proba(input_df).tolist()[0]
+        # Get the numeric prediction
+        pred_index = int(model.predict(input_df).tolist()[0])
+        
+        # Use the dictionary to translate the number to the readable class name
+        predicted_class = CLASS_MAPPING.get(pred_index, "Unknown Class")
 
+        # Return the beautifully translated data
         return jsonify({
             "status": "success",
-            "prediction": prediction,
-            "probabilities": probabilities
+            "prediction": predicted_class,
+            "prediction_code": pred_index,
         })
 
     except Exception as e:
