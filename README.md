@@ -26,6 +26,19 @@ InsightWellness-AI/
 └── pyproject.toml
 ```
 
+## API
+
+The REST API is built with **Flask** and served via **Gunicorn**, designed for serverless production deployment on **Google Cloud Run**. 
+
+FUpon initialization, the application securely authenticates and downloads the latest trained model (`model.joblib`) directly from a private Google Cloud Storage (GCS) bucket using `gcsfs`.
+
+### Endpoints
+
+- **`GET /`** : Returns general information about the API and available routes.
+- **`GET /status`** : Verifies if the API is running and if the model was successfully loaded from the GCS bucket.
+- **`GET /features`** : Returns the expected JSON schema, including detailed descriptions and valid values for all required patient lifestyle features.
+- **`POST /predict`** : The main inference endpoint. Accepts a JSON payload of user data, automatically validates the inputs against the expected schema, reorders features to match the model's training state, and returns the predicted obesity classification.
+
 ## Vertex AI pipeline
 
 - Data ingestion: Collect data from BigQuery​
