@@ -14,6 +14,7 @@ def evaluation(
     import joblib
     import matplotlib.pyplot as plt
     import json
+    import os
 
     from insightwellness_ai.config import TARGET
     from insightwellness_ai.evaluation import evaluate_model
@@ -22,7 +23,7 @@ def evaluation(
     X_test = df.drop(columns=[TARGET])
     y_test = df[TARGET]
 
-    clf = joblib.load(model.path)
+    clf = joblib.load(os.path.join(model.path, "model.joblib"))
     eval_metrics, report, cm = evaluate_model(clf, X_test, y_test)
 
     for k, v in eval_metrics.items():

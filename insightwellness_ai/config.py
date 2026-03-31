@@ -1,5 +1,5 @@
 PROJECT_ID = "mlsd-487610"
-BUCKET_NAME = "gs://mlops-2026-ramzan1"
+BUCKET_NAME = "mlops-2026-ramzan1"
 
 RAW_DATA = "gs://mlops-2026-ramzan1/raw/data_raw.csv"
 
@@ -17,7 +17,7 @@ TRAIN_CONFIG = {
     },
 }
 
-PIPELINE_ROOT = f"{BUCKET_NAME}/pipeline-root"
+PIPELINE_ROOT = f"gs://{BUCKET_NAME}/pipeline-root"
 LOCATION = "europe-west1"
 
 BQ_DATASET = "obesity_dataset"
