@@ -2,6 +2,7 @@ import os
 import joblib
 import pandas as pd
 import gcsfs
+import shap
 from flask import Flask, request, jsonify
 from flasgger import Swagger
 
@@ -141,6 +142,7 @@ def index():
                 "GET /status": "Check API health.",
                 "GET /features": "View expected schema.",
                 "POST /predict": "Send patient data JSON for prediction.",
+                "POST /explain": "Send patient data JSON for prediction and SHAP feature impact explanation.",
                 "GET /apidocs": "View interactive Swagger documentation."
             },
         }
@@ -331,6 +333,96 @@ def predict():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+
+@app.route("/explain", methods=["POST"])
+def explain():
+    """
+    Explain a prediction using SHAP feature impact scores.
+    Takes the same patient JSON payload as /predict and returns the predicted class
+    plus the most influential features for that prediction.
+    ---
+    tags:
+      - Explanation
+    parameters:
+      - in: body
+        name: patient_data
+        description: JSON dictionary containing patient metrics (same schema as /predict).
+        required: true
+        schema:
+          type: object
+    responses:
+      200:
+        description: Successful prediction with SHAP explanation.
+      400:
+        description: Invalid payload or explanation failure.
+      500:
+        description: Model not loaded or internal server error.
+    """
+    if model is None or FEATURE_ORDER is None:
+        return jsonify({"error": "Model not loaded."}), 500
+
+    try:
+        data = request.get_json()
+
+        if not data or not isinstance(data, dict):
+            return jsonify({"error": "Payload must be a JSON dictionary."}), 400
+
+        missing_features = [f for f in FEATURE_ORDER if f not in data]
+        if missing_features:
+            return jsonify({"error": f"Missing features: {missing_features}"}), 400
+
+        # Reorder input data
+        ordered_input = {f: data[f] for f in FEATURE_ORDER}
+        input_df = pd.DataFrame([ordered_input], columns=FEATURE_ORDER)
+
+        # Prediction
+        pred_index = int(model.predict(input_df).tolist()[0])
+        predicted_class = CLASS_MAPPING.get(pred_index, "Unknown Class")
+
+        # SHAP Explanations
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(input_df)
+
+        if isinstance(shap_values, list):
+            # Select the list item for the predicted class, then grab the first (and only) row
+            class_shap_values = shap_values[pred_index][0]
+        elif hasattr(shap_values, "shape") and len(shap_values.shape) == 3:
+            # Fallback just in case a future SHAP update changes the output to a 3D array
+            class_shap_values = shap_values[0, :, pred_index]
+        else:
+            # Binary classification fallback
+            class_shap_values = shap_values[0]
+
+        # Map features to their specific SHAP values (impact scores)
+        feature_impacts = [
+            {
+                "feature": feature,
+                "impact_score": round(float(impact), 4),
+                "input_value": ordered_input[feature],
+            }
+            for feature, impact in zip(FEATURE_ORDER, class_shap_values)
+        ]
+
+        # Sort by absolute impact to surface the most influential factors at the top
+        feature_impacts.sort(key=lambda x: abs(x["impact_score"]), reverse=True)
+
+        return jsonify(
+            {
+                "status": "success",
+                "prediction": predicted_class,
+                "explanation": {
+                    "description": (
+                        "Impact scores show how much each feature pushed the prediction toward this specific class. "
+                        "Positive scores pushed toward this class, negative scores pushed away."
+                    ),
+                    "top_drivers": feature_impacts[:3],
+                },
+            }
+        ), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Explanation failed: {str(e)}"}), 400
 
 
 if __name__ == "__main__":

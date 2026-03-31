@@ -20,10 +20,12 @@ dependencies = [
     "joblib>=1.5.3",
     "kfp>=2.16.0",
     "matplotlib>=3.10.8",
+    "numba>=0.59.0",
     "numpy>=2.2.6",
     "pandas>=2.3.3",
     "pyyaml>=6.0.3",
     "scikit-learn>=1.7.2",
+    "shap>=0.45.0",
 ]
 requires-python = ">=3.11"
 
