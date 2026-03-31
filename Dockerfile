@@ -11,8 +11,6 @@ RUN uv sync --frozen --no-dev --no-install-project
 
 COPY insightwellness_ai/api/app.py .
 
-COPY models/ ./models/
-
 # Add the virtual environment to PATH
 ENV PATH="/app/.venv/bin:$PATH"
 

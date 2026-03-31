@@ -1,6 +1,7 @@
 import os
 import joblib
 import pandas as pd
+import gcsfs
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
@@ -85,23 +86,23 @@ CLASS_MAPPING = {
 }
 
 # --- Load Model ---
-MODEL_DIR = "models"
-MODEL_PATH = os.path.join(MODEL_DIR, "model.joblib")
+MODEL_PATH = "gs://mlops-2026-ramzan1/models/model.joblib"
 
 model = None
-
 
 def load_model_artifacts():
     global model, FEATURE_ORDER
     print(f"Loading model from: {MODEL_PATH}")
     try:
-        model = joblib.load(MODEL_PATH)
+        fs = gcsfs.GCSFileSystem()
+        
+        with fs.open(MODEL_PATH, 'rb') as f:
+            model = joblib.load(f)
+            
         FEATURE_ORDER = model.feature_names_in_.tolist()
-        print("Model loaded successfully!")
-        print(f"Model expects these features: {FEATURE_ORDER}")
+        print("Model loaded successfully from Cloud Storage!")
     except Exception as e:
         print(f"CRITICAL ERROR: Could not load model: {e}")
-
 
 load_model_artifacts()
 
