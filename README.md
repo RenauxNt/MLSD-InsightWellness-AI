@@ -32,7 +32,7 @@ InsightWellness-AI/
 - Preprocess: Cleaning, feature engineering
 and train/test split. ​
 - Model selection: Hyperparameter tuning.​
-- Training: Train on train data.​
+- Training: Train on train data to produce the model.​
 - Evaluation: Produces performance metrics using test
 data.
 
