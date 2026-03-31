@@ -28,7 +28,7 @@ InsightWellness-AI/
 
 ## API
 
-The REST API is built with **Flask** and served via **Gunicorn**, designed for serverless production deployment on **Google Cloud Run**. 
+The REST API is built with **Flask** and served via **Gunicorn**, designed for serverless production deployment on **Google Cloud Run**.
 
 FUpon initialization, the application securely authenticates and downloads the latest trained model (`model.joblib`) directly from a private Google Cloud Storage (GCS) bucket using `gcsfs`.
 
@@ -48,4 +48,3 @@ and train/test split. ​
 - Training: Train on train data to produce the model.​
 - Evaluation: Produces performance metrics using test
 data.
-
