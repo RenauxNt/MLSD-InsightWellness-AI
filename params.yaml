@@ -17,3 +17,9 @@ train:
   param_grid:
     max_depth: [3, 5, 7]
     learning_rate: [0.05, 0.1, 0.2]
+
+bq:
+  project_id: mlsd-487610
+  bq_dataset: mlsd-487610.obesity_dataset
+  train_table: train_table
+  test_table: test_table
