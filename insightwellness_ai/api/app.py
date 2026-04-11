@@ -3,8 +3,19 @@ import joblib
 import pandas as pd
 import gcsfs
 from flask import Flask, request, jsonify
+from flasgger import Swagger
 
 app = Flask(__name__)
+
+# Initialize Flasgger
+# This automatically creates a Swagger UI at /apidocs
+swagger = Swagger(app, template={
+    "info": {
+        "title": "InsightWellness API",
+        "description": "API for predicting obesity risk levels based on patient data.",
+        "version": "1.0.0"
+    }
+})
 
 FEATURE_ORDER = None
 
@@ -113,6 +124,16 @@ load_model_artifacts()
 
 @app.route("/", methods=["GET"])
 def index():
+    """
+    API Root endpoint.
+    Returns the API name and a list of available endpoints.
+    ---
+    tags:
+      - Info
+    responses:
+      200:
+        description: A JSON dictionary with API details.
+    """
     return jsonify(
         {
             "name": "InsightWellness API (Cloud Run Ready)",
@@ -120,6 +141,7 @@ def index():
                 "GET /status": "Check API health.",
                 "GET /features": "View expected schema.",
                 "POST /predict": "Send patient data JSON for prediction.",
+                "GET /apidocs": "View interactive Swagger documentation."
             },
         }
     ), 200
@@ -127,6 +149,18 @@ def index():
 
 @app.route("/status", methods=["GET"])
 def status():
+    """
+    Check API health and model status.
+    Verifies if the machine learning model has been successfully loaded into memory.
+    ---
+    tags:
+      - Health
+    responses:
+      200:
+        description: API is running and model is loaded.
+      500:
+        description: Model failed to load.
+    """
     if model is not None and FEATURE_ORDER is not None:
         return jsonify({"status": "available"}), 200
     return jsonify({"status": "unavailable", "error": "Model failed to load."}), 500
@@ -134,6 +168,16 @@ def status():
 
 @app.route("/features", methods=["GET"])
 def features():
+    """
+    View expected model input schema.
+    Returns the dictionary of expected features, descriptions, and valid values.
+    ---
+    tags:
+      - Info
+    responses:
+      200:
+        description: A dictionary of expected features.
+    """
     return jsonify(
         {
             "status": "success",
@@ -144,6 +188,79 @@ def features():
 
 @app.route("/predict", methods=["POST"])
 def predict():
+    """
+    Predict obesity risk level based on patient data.
+    Takes a JSON payload of patient statistics and returns the predicted weight classification.
+    ---
+    tags:
+      - Prediction
+    parameters:
+      - in: body
+        name: patient_data
+        description: JSON dictionary containing patient metrics.
+        required: true
+        schema:
+          type: object
+          properties:
+            Gender:
+              type: integer
+              example: 1
+            Age:
+              type: number
+              example: 25.5
+            family_history_with_overweight:
+              type: integer
+              example: 1
+            FAVC:
+              type: integer
+              example: 1
+            FCVC:
+              type: integer
+              example: 2
+            NCP:
+              type: integer
+              example: 3
+            CAEC:
+              type: integer
+              example: 1
+            SMOKE:
+              type: integer
+              example: 0
+            CH2O:
+              type: integer
+              example: 2
+            SCC:
+              type: integer
+              example: 0
+            FAF:
+              type: integer
+              example: 1
+            TUE:
+              type: integer
+              example: 1
+            CALC:
+              type: integer
+              example: 1
+            MTRANS_automobile:
+              type: integer
+              example: 1
+            MTRANS_motorbike:
+              type: integer
+              example: 0
+            MTRANS_bike:
+              type: integer
+              example: 0
+            MTRANS_walking:
+              type: integer
+              example: 0
+    responses:
+      200:
+        description: Successful prediction.
+      400:
+        description: Invalid payload (missing features, invalid types, or bad values).
+      500:
+        description: Model not loaded or internal server error.
+    """
     if model is None or FEATURE_ORDER is None:
         return jsonify({"error": "Model not loaded."}), 500
 
