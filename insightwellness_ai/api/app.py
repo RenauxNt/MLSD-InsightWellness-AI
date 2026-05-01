@@ -90,19 +90,21 @@ MODEL_PATH = "gs://mlops-2026-ramzan1/models/model.joblib"
 
 model = None
 
+
 def load_model_artifacts():
     global model, FEATURE_ORDER
     print(f"Loading model from: {MODEL_PATH}")
     try:
         fs = gcsfs.GCSFileSystem()
-        
-        with fs.open(MODEL_PATH, 'rb') as f:
+
+        with fs.open(MODEL_PATH, "rb") as f:
             model = joblib.load(f)
-            
+
         FEATURE_ORDER = model.feature_names_in_.tolist()
         print("Model loaded successfully from Cloud Storage!")
     except Exception as e:
         print(f"CRITICAL ERROR: Could not load model: {e}")
+
 
 load_model_artifacts()
 
