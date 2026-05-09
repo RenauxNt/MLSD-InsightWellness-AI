@@ -10,7 +10,7 @@ COPY pyproject.toml uv.lock ./
 
 
 # Install dependencies system-wide (no venv: this is a base image for pipeline components)
-RUN uv export --frozen --no-dev --no-hashes -o /tmp/requirements.txt && \
+RUN uv export --frozen --no-default-groups --group vertex --no-hashes -o /tmp/requirements.txt && \
     uv pip install --system -r /tmp/requirements.txt
 
 COPY insightwellness_ai/ insightwellness_ai/
