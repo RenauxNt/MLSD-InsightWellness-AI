@@ -13,6 +13,7 @@ Run locally with:
 import os
 
 import gcsfs
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import requests
@@ -87,6 +88,10 @@ CATEGORICAL_OPTIONS = {
     "FAF": {0: "None", 1: "1-2 days", 2: "2-4 days", 3: "4-5 days"},
     "TUE": {0: "0-2h", 1: "3-5h", 2: ">5h"},
     "CALC": {0: "No", 1: "Sometimes", 2: "Frequently", 3: "Always"},
+    "MTRANS_automobile": {0: "No", 1: "Yes"},
+    "MTRANS_motorbike": {0: "No", 1: "Yes"},
+    "MTRANS_bike": {0: "No", 1: "Yes"},
+    "MTRANS_walking": {0: "No", 1: "Yes"},
 }
 
 MTRANS_FEATURES = [f for f in FEATURE_ORDER if f.startswith("MTRANS_")]
@@ -96,14 +101,6 @@ MTRANS_LABEL_TO_KEY = {
     "Motorbike": "MTRANS_motorbike",
     "Bike": "MTRANS_bike",
     "Walking": "MTRANS_walking",
-}
-BINARY_FEATURES = {
-    "Gender",
-    "family_history_with_overweight",
-    "FAVC",
-    "SMOKE",
-    "SCC",
-    *MTRANS_FEATURES,
 }
 
 
@@ -266,33 +263,43 @@ def page_prediction() -> None:
 def build_distribution_plot(
     df: pd.DataFrame, feature: str, user_value, template: str
 ):
-    is_categorical = feature in BINARY_FEATURES
     label_map = CATEGORICAL_OPTIONS.get(feature)
+    friendly = FEATURE_LABELS.get(feature, feature)
 
-    if is_categorical:
-        counts = df[feature].value_counts().sort_index().reset_index()
-        counts.columns = [feature, "count"]
-        counts["label"] = (
-            counts[feature].map(label_map).fillna(counts[feature].astype(str))
-            if label_map is not None
-            else counts[feature].astype(str)
+    if label_map is not None:
+        # SMOTE-generated values can be continuous (e.g. FCVC=1.7), so snap each
+        # row back to the nearest valid integer bucket before counting.
+        valid_keys = sorted(label_map.keys())
+        binned = (
+            df[feature]
+            .round()
+            .clip(min(valid_keys), max(valid_keys))
+            .astype(int)
         )
+        counts = (
+            binned.value_counts()
+            .reindex(valid_keys, fill_value=0)
+            .reset_index()
+        )
+        counts.columns = [feature, "count"]
+        counts["label"] = counts[feature].map(label_map)
+        category_order = [label_map[k] for k in valid_keys]
+
         fig = px.bar(
             counts,
             x="label",
             y="count",
             template=template,
-            title=f"Distribution of {FEATURE_LABELS.get(feature, feature)}",
-            labels={"label": feature},
+            title=f"Distribution of {friendly}",
+            labels={"label": friendly, "count": "Count"},
+            category_orders={"label": category_order},
         )
+
         if user_value is not None:
-            user_label = (
-                label_map.get(user_value, str(user_value))
-                if label_map
-                else str(user_value)
-            )
+            user_key = int(round(user_value))
+            user_label = label_map.get(user_key, str(user_key))
             colors = [
-                "#e6550d" if str(x) == user_label else "#1f77b4"
+                "#e6550d" if x == user_label else "#1f77b4"
                 for x in counts["label"]
             ]
             fig.update_traces(marker_color=colors)
@@ -305,23 +312,76 @@ def build_distribution_plot(
                 showarrow=False,
                 font=dict(color="#e6550d"),
             )
-    else:
-        fig = px.histogram(
-            df,
-            x=feature,
-            nbins=40,
-            template=template,
-            title=f"Distribution of {FEATURE_LABELS.get(feature, feature)}",
+        return fig
+
+    # Truly continuous feature (Age) — keep the histogram view.
+    fig = px.histogram(
+        df,
+        x=feature,
+        nbins=40,
+        template=template,
+        title=f"Distribution of {friendly}",
+        labels={feature: friendly},
+    )
+    if user_value is not None:
+        fig.add_vline(
+            x=user_value,
+            line_color="#e6550d",
+            line_width=2,
+            line_dash="dash",
+            annotation_text=f"You: {user_value:g}",
+            annotation_position="top",
         )
-        if user_value is not None:
-            fig.add_vline(
-                x=user_value,
-                line_color="#e6550d",
-                line_width=2,
-                line_dash="dash",
-                annotation_text=f"You: {user_value:g}",
-                annotation_position="top",
-            )
+    return fig
+
+
+def build_bivariate_plot(
+    df: pd.DataFrame,
+    x_feat: str,
+    y_feat: str,
+    user_inputs: dict | None,
+    template: str,
+):
+    rng = np.random.default_rng(0)
+
+    def _maybe_jitter(series: pd.Series) -> pd.Series:
+        if series.nunique() <= 5:
+            return series + rng.uniform(-0.15, 0.15, len(series))
+        return series
+
+    plot_df = df.copy()
+    plot_df["Obesity class"] = plot_df["Obesity"].map(CLASS_MAPPING)
+    plot_df[x_feat] = _maybe_jitter(plot_df[x_feat])
+    plot_df[y_feat] = _maybe_jitter(plot_df[y_feat])
+
+    x_label = FEATURE_LABELS.get(x_feat, x_feat)
+    y_label = FEATURE_LABELS.get(y_feat, y_feat)
+    class_order = [CLASS_MAPPING[i] for i in sorted(CLASS_MAPPING)]
+
+    fig = px.scatter(
+        plot_df,
+        x=x_feat,
+        y=y_feat,
+        color="Obesity class",
+        opacity=0.55,
+        template=template,
+        title=f"{x_label} vs {y_label}",
+        labels={x_feat: x_label, y_feat: y_label},
+        category_orders={"Obesity class": class_order},
+    )
+
+    if (
+        user_inputs is not None
+        and x_feat in user_inputs
+        and y_feat in user_inputs
+    ):
+        fig.add_scatter(
+            x=[user_inputs[x_feat]],
+            y=[user_inputs[y_feat]],
+            mode="markers",
+            marker=dict(size=18, color="black", symbol="star"),
+            name="You",
+        )
     return fig
 
 
@@ -358,6 +418,29 @@ def page_exploration() -> None:
         st.info(
             "Submit a prediction first to overlay your value on each distribution."
         )
+
+    peer_only = st.checkbox(
+        "Compare to peer group (same gender, age ±5y)",
+        value=False,
+        disabled=user_inputs is None,
+        help="Filters the dataset to rows matching your gender and age ±5 years.",
+    )
+    plot_df = df
+    if peer_only and user_inputs is not None:
+        peer_age = user_inputs["Age"]
+        peer_gender = user_inputs["Gender"]
+        plot_df = df[
+            (df["Gender"] == peer_gender)
+            & (df["Age"].between(peer_age - 5, peer_age + 5))
+        ]
+        st.caption(
+            f"Peer group: gender={CATEGORICAL_OPTIONS['Gender'][peer_gender]}, "
+            f"age {peer_age - 5:g}–{peer_age + 5:g} → N={len(plot_df):,}"
+        )
+        if plot_df.empty:
+            st.warning("No peer rows match — falling back to full dataset.")
+            plot_df = df
+
     feature = st.selectbox(
         "Pick a feature",
         [f for f in FEATURE_ORDER if f in df.columns],
@@ -365,23 +448,38 @@ def page_exploration() -> None:
     )
     user_value = user_inputs.get(feature) if user_inputs else None
     st.plotly_chart(
-        build_distribution_plot(df, feature, user_value, template),
+        build_distribution_plot(plot_df, feature, user_value, template),
         width="stretch",
     )
 
-    st.subheader("Correlation heatmap")
-    corr_cols = [f for f in FEATURE_ORDER + ["Obesity"] if f in df.columns]
-    fig = px.imshow(
-        df[corr_cols].corr(),
-        text_auto=".2f",
-        aspect="auto",
-        color_continuous_scale="RdBu_r",
-        zmin=-1,
-        zmax=1,
-        template=template,
-        title="Pearson correlation",
+    st.subheader("Bivariate exploration")
+    st.caption(
+        "Plot any two features against each other, colored by obesity class. "
+        "Discrete features are jittered slightly so points don't fully overlap."
     )
-    st.plotly_chart(fig, width="stretch")
+    bv_cols = st.columns(2)
+    feature_choices = [f for f in FEATURE_ORDER if f in df.columns]
+    with bv_cols[0]:
+        x_feat = st.selectbox(
+            "X axis",
+            feature_choices,
+            index=feature_choices.index("Age") if "Age" in feature_choices else 0,
+            format_func=lambda f: FEATURE_LABELS.get(f, f),
+            key="bv_x",
+        )
+    with bv_cols[1]:
+        default_y = "FAF" if "FAF" in feature_choices else feature_choices[1]
+        y_feat = st.selectbox(
+            "Y axis",
+            feature_choices,
+            index=feature_choices.index(default_y),
+            format_func=lambda f: FEATURE_LABELS.get(f, f),
+            key="bv_y",
+        )
+    st.plotly_chart(
+        build_bivariate_plot(df, x_feat, y_feat, user_inputs, template),
+        width="stretch",
+    )
 
 
 def main() -> None:
