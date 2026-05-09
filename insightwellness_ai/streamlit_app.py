@@ -204,16 +204,20 @@ def render_probabilities(probabilities: dict) -> None:
 
 def render_shap_drivers(drivers: list[dict]) -> None:
     drivers_df = pd.DataFrame(drivers)
+    drivers_df["feature_label"] = drivers_df["feature"].map(
+        lambda f: FEATURE_LABELS.get(f, f)
+    )
     drivers_df["direction"] = drivers_df["impact_score"].apply(
         lambda v: "pushes toward" if v > 0 else "pushes away"
     )
     fig = px.bar(
         drivers_df.iloc[::-1],
         x="impact_score",
-        y="feature",
+        y="feature_label",
         orientation="h",
         color="direction",
         title=f"Top {len(drivers_df)} SHAP drivers for the predicted class",
+        labels={"feature_label": "Feature", "impact_score": "Impact score"},
         color_discrete_map={"pushes toward": "#e6550d", "pushes away": "#3182bd"},
     )
     st.plotly_chart(fig, width="stretch")
@@ -247,7 +251,7 @@ def page_prediction() -> None:
 
     if run_explain:
         try:
-            result = call_api("explain", inputs, params={"top_n": 8})
+            result = call_api("explain", inputs, params={"top_n": 5})
             st.success(f"Predicted class: **{result['prediction']}**")
             if result.get("probabilities"):
                 render_probabilities(result["probabilities"])
