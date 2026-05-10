@@ -1,10 +1,12 @@
 """Streamlit dashboard for InsightWellness AI.
 
-Two pages:
+Three pages:
 - Prediction: collects the 17 lifestyle features and calls the deployed
   Cloud Run API (/predict, /explain) to get a class + SHAP explanation.
 - Data exploration: shows distributions of each feature and overlays
   the user's last submitted values for context.
+- Ask the team: chat with the multi-agent team (predictor + RAG + web)
+  via the deployed agents service (/ask).
 
 Run locally with:
     streamlit run insightwellness_ai/streamlit_app.py
@@ -13,7 +15,6 @@ Run locally with:
 import os
 
 import gcsfs
-import numpy as np
 import pandas as pd
 import plotly.express as px
 import requests
@@ -24,6 +25,7 @@ DEFAULT_API_URL = os.environ.get(
     "INSIGHTWELLNESS_API_URL",
     "https://insightwellness-api-545205658175.europe-west1.run.app",
 )
+DEFAULT_AGENTS_URL = os.environ.get("INSIGHTWELLNESS_AGENTS_URL", "")
 
 CLASS_MAPPING = {
     0: "Insufficient_Weight",
@@ -73,6 +75,7 @@ FEATURE_LABELS = {
     "MTRANS_motorbike": "Transport: Motorbike",
     "MTRANS_bike": "Transport: Bike",
     "MTRANS_walking": "Transport: Walking",
+    "MTRANS": "Main transport",
 }
 
 CATEGORICAL_OPTIONS = {
@@ -92,6 +95,13 @@ CATEGORICAL_OPTIONS = {
     "MTRANS_motorbike": {0: "No", 1: "Yes"},
     "MTRANS_bike": {0: "No", 1: "Yes"},
     "MTRANS_walking": {0: "No", 1: "Yes"},
+    "MTRANS": {
+        0: "Public transportation",
+        1: "Automobile",
+        2: "Motorbike",
+        3: "Bike",
+        4: "Walking",
+    },
 }
 
 MTRANS_FEATURES = [f for f in FEATURE_ORDER if f.startswith("MTRANS_")]
@@ -118,12 +128,26 @@ def call_api(endpoint: str, payload: dict, params: dict | None = None) -> dict:
     return response.json()
 
 
+def call_agents(question: str) -> str:
+    if not DEFAULT_AGENTS_URL:
+        raise RuntimeError(
+            "INSIGHTWELLNESS_AGENTS_URL is not set — deploy the agents service "
+            "and export the URL before using this page."
+        )
+    url = f"{DEFAULT_AGENTS_URL.rstrip('/')}/ask"
+    response = requests.post(url, json={"question": question}, timeout=120)
+    response.raise_for_status()
+    return response.json().get("answer", "")
+
+
 def render_sidebar() -> str:
     st.sidebar.title("InsightWellness AI")
     st.sidebar.caption("Obesity-risk early warning")
 
     return st.sidebar.radio(
-        "Page", ["Prediction", "Data exploration"], key="page"
+        "Page",
+        ["Prediction", "Data exploration", "Ask the team"],
+        key="page",
     )
 
 
@@ -172,7 +196,7 @@ def render_input_form() -> dict:
         for feature in ["CH2O", "SCC", "FAF", "TUE", "CALC"]:
             inputs[feature] = render_feature_input(feature)
 
-        choice = st.radio(
+        choice = st.selectbox(
             "Main transport",
             list(MTRANS_LABEL_TO_KEY.keys()),
             key="mtrans_choice",
@@ -339,63 +363,16 @@ def build_distribution_plot(
     return fig
 
 
-def build_bivariate_plot(
-    df: pd.DataFrame,
-    x_feat: str,
-    y_feat: str,
-    user_inputs: dict | None,
-    template: str,
-):
-    rng = np.random.default_rng(0)
-
-    def _maybe_jitter(series: pd.Series) -> pd.Series:
-        if series.nunique() <= 5:
-            return series + rng.uniform(-0.15, 0.15, len(series))
-        return series
-
-    plot_df = df.copy()
-    plot_df["Obesity class"] = plot_df["Obesity"].map(CLASS_MAPPING)
-    plot_df[x_feat] = _maybe_jitter(plot_df[x_feat])
-    plot_df[y_feat] = _maybe_jitter(plot_df[y_feat])
-
-    x_label = FEATURE_LABELS.get(x_feat, x_feat)
-    y_label = FEATURE_LABELS.get(y_feat, y_feat)
-    class_order = [CLASS_MAPPING[i] for i in sorted(CLASS_MAPPING)]
-
-    fig = px.scatter(
-        plot_df,
-        x=x_feat,
-        y=y_feat,
-        color="Obesity class",
-        opacity=0.55,
-        template=template,
-        title=f"{x_label} vs {y_label}",
-        labels={x_feat: x_label, y_feat: y_label},
-        category_orders={"Obesity class": class_order},
-    )
-
-    if (
-        user_inputs is not None
-        and x_feat in user_inputs
-        and y_feat in user_inputs
-    ):
-        fig.add_scatter(
-            x=[user_inputs[x_feat]],
-            y=[user_inputs[y_feat]],
-            mode="markers",
-            marker=dict(size=18, color="black", symbol="star"),
-            name="You",
-        )
-    return fig
+def _transport_code(values) -> int:
+    for code, key in enumerate(MTRANS_FEATURES, start=1):
+        if values.get(key, 0) >= 0.5:
+            return code
+    return 0
 
 
 def page_exploration() -> None:
     st.title("Data exploration")
     df = load_dataset(DATA_PATH)
-    st.caption(
-        f"Loaded {len(df):,} preprocessed records with {df.shape[1]} columns "
-        f"from `{DATA_PATH}`."
-    )
 
     template = "plotly_white"
     user_inputs = st.session_state.get("last_inputs")
@@ -445,45 +422,81 @@ def page_exploration() -> None:
             st.warning("No peer rows match — falling back to full dataset.")
             plot_df = df
 
+    feature_choices = [
+        f for f in FEATURE_ORDER
+        if f in df.columns and not f.startswith("MTRANS_")
+    ]
+    if all(f in df.columns for f in MTRANS_FEATURES):
+        feature_choices.append("MTRANS")
+
     feature = st.selectbox(
         "Pick a feature",
-        [f for f in FEATURE_ORDER if f in df.columns],
+        feature_choices,
         format_func=lambda f: FEATURE_LABELS.get(f, f),
     )
-    user_value = user_inputs.get(feature) if user_inputs else None
+    if feature == "MTRANS":
+        plot_df = plot_df.copy()
+        plot_df["MTRANS"] = plot_df[MTRANS_FEATURES].apply(_transport_code, axis=1)
+        user_value = _transport_code(user_inputs) if user_inputs else None
+    else:
+        user_value = user_inputs.get(feature) if user_inputs else None
     st.plotly_chart(
         build_distribution_plot(plot_df, feature, user_value, template),
         width="stretch",
     )
 
-    st.subheader("Bivariate exploration")
-    st.caption(
-        "Plot any two features against each other, colored by obesity class. "
-        "Discrete features are jittered slightly so points don't fully overlap."
+
+def page_ask_team() -> None:
+    st.title("Ask the team")
+    st.write(
+        "Chat with the multi-agent team: a predictor that calls the model API, "
+        "a RAG agent grounded in the project knowledge base, and a web research "
+        "agent for external context."
     )
-    bv_cols = st.columns(2)
-    feature_choices = [f for f in FEATURE_ORDER if f in df.columns]
-    with bv_cols[0]:
-        x_feat = st.selectbox(
-            "X axis",
-            feature_choices,
-            index=feature_choices.index("Age") if "Age" in feature_choices else 0,
-            format_func=lambda f: FEATURE_LABELS.get(f, f),
-            key="bv_x",
+
+    if not DEFAULT_AGENTS_URL:
+        st.warning(
+            "Agents service URL is not configured. Set the "
+            "`INSIGHTWELLNESS_AGENTS_URL` environment variable to the deployed "
+            "service (e.g. `https://insightwellness-agents-…run.app`)."
         )
-    with bv_cols[1]:
-        default_y = "FAF" if "FAF" in feature_choices else feature_choices[1]
-        y_feat = st.selectbox(
-            "Y axis",
-            feature_choices,
-            index=feature_choices.index(default_y),
-            format_func=lambda f: FEATURE_LABELS.get(f, f),
-            key="bv_y",
-        )
-    st.plotly_chart(
-        build_bivariate_plot(df, x_feat, y_feat, user_inputs, template),
-        width="stretch",
-    )
+
+    history = st.session_state.setdefault("chat_history", [])
+
+    last_inputs = st.session_state.get("last_inputs")
+    if last_inputs and not history:
+        if st.button("Suggest: explain my last prediction"):
+            prefilled = (
+                "I just submitted these lifestyle features: "
+                f"{last_inputs}. Predict my obesity class and explain "
+                "the main drivers."
+            )
+            st.session_state["pending_question"] = prefilled
+
+    for role, message in history:
+        with st.chat_message(role):
+            st.markdown(message)
+
+    pending = st.session_state.pop("pending_question", None)
+    typed = st.chat_input("Ask anything about your risk, the dataset, or healthy habits…")
+    question = pending or typed
+
+    if not question:
+        return
+
+    history.append(("user", question))
+    with st.chat_message("user"):
+        st.markdown(question)
+
+    with st.chat_message("assistant"):
+        with st.spinner("The team is thinking…"):
+            try:
+                answer = call_agents(question)
+            except (requests.exceptions.RequestException, RuntimeError) as e:
+                answer = f"Agents request failed: {e}"
+        st.markdown(answer)
+
+    history.append(("assistant", answer))
 
 
 def main() -> None:
@@ -494,8 +507,10 @@ def main() -> None:
     page = render_sidebar()
     if page == "Prediction":
         page_prediction()
-    else:
+    elif page == "Data exploration":
         page_exploration()
+    else:
+        page_ask_team()
 
 
 if __name__ == "__main__":
