@@ -10,13 +10,16 @@ app = Flask(__name__)
 
 # Initialize Flasgger
 # This automatically creates a Swagger UI at /apidocs
-swagger = Swagger(app, template={
-    "info": {
-        "title": "InsightWellness API",
-        "description": "API for predicting obesity risk levels based on patient data.",
-        "version": "1.0.0"
-    }
-})
+swagger = Swagger(
+    app,
+    template={
+        "info": {
+            "title": "InsightWellness API",
+            "description": "API for predicting obesity risk levels based on patient data.",
+            "version": "1.0.0",
+        }
+    },
+)
 
 FEATURE_ORDER = None
 
@@ -190,7 +193,7 @@ def index():
                 "GET /features": "View expected schema.",
                 "POST /predict": "Send patient data JSON for prediction.",
                 "POST /explain": "Send patient data JSON for prediction and SHAP feature impact explanation.",
-                "GET /apidocs": "View interactive Swagger documentation."
+                "GET /apidocs": "View interactive Swagger documentation.",
             },
         }
     ), 200
