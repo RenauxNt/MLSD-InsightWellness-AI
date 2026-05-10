@@ -13,17 +13,43 @@ with patch("gcsfs.GCSFileSystem", side_effect=RuntimeError("gcs disabled in test
 
 
 FEATURE_ORDER = [
-    "Gender", "Age", "family_history_with_overweight", "FAVC", "FCVC",
-    "NCP", "CAEC", "SMOKE", "CH2O", "SCC", "FAF", "TUE", "CALC",
-    "MTRANS_automobile", "MTRANS_motorbike", "MTRANS_bike", "MTRANS_walking",
+    "Gender",
+    "Age",
+    "family_history_with_overweight",
+    "FAVC",
+    "FCVC",
+    "NCP",
+    "CAEC",
+    "SMOKE",
+    "CH2O",
+    "SCC",
+    "FAF",
+    "TUE",
+    "CALC",
+    "MTRANS_automobile",
+    "MTRANS_motorbike",
+    "MTRANS_bike",
+    "MTRANS_walking",
 ]
 
 VALID_PAYLOAD = {
-    "Gender": 1, "Age": 25.5, "family_history_with_overweight": 1,
-    "FAVC": 1, "FCVC": 2, "NCP": 3, "CAEC": 1, "SMOKE": 0,
-    "CH2O": 2, "SCC": 0, "FAF": 1, "TUE": 1, "CALC": 1,
-    "MTRANS_automobile": 1, "MTRANS_motorbike": 0,
-    "MTRANS_bike": 0, "MTRANS_walking": 0,
+    "Gender": 1,
+    "Age": 25.5,
+    "family_history_with_overweight": 1,
+    "FAVC": 1,
+    "FCVC": 2,
+    "NCP": 3,
+    "CAEC": 1,
+    "SMOKE": 0,
+    "CH2O": 2,
+    "SCC": 0,
+    "FAF": 1,
+    "TUE": 1,
+    "CALC": 1,
+    "MTRANS_automobile": 1,
+    "MTRANS_motorbike": 0,
+    "MTRANS_bike": 0,
+    "MTRANS_walking": 0,
 }
 
 
