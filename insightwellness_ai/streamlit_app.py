@@ -209,12 +209,12 @@ def render_input_form() -> dict:
 
 
 def render_probabilities(probabilities: dict) -> None:
-    proba_df = (
-        pd.DataFrame(
-            {"class": list(probabilities.keys()), "probability": list(probabilities.values())}
-        )
-        .sort_values("probability", ascending=True)
-    )
+    proba_df = pd.DataFrame(
+        {
+            "class": list(probabilities.keys()),
+            "probability": list(probabilities.values()),
+        }
+    ).sort_values("probability", ascending=True)
     fig = px.bar(
         proba_df,
         x="probability",
@@ -288,9 +288,7 @@ def page_prediction() -> None:
             st.error(f"API request failed: {e}")
 
 
-def build_distribution_plot(
-    df: pd.DataFrame, feature: str, user_value, template: str
-):
+def build_distribution_plot(df: pd.DataFrame, feature: str, user_value, template: str):
     label_map = CATEGORICAL_OPTIONS.get(feature)
     friendly = FEATURE_LABELS.get(feature, feature)
 
@@ -298,17 +296,8 @@ def build_distribution_plot(
         # SMOTE-generated values can be continuous (e.g. FCVC=1.7), so snap each
         # row back to the nearest valid integer bucket before counting.
         valid_keys = sorted(label_map.keys())
-        binned = (
-            df[feature]
-            .round()
-            .clip(min(valid_keys), max(valid_keys))
-            .astype(int)
-        )
-        counts = (
-            binned.value_counts()
-            .reindex(valid_keys, fill_value=0)
-            .reset_index()
-        )
+        binned = df[feature].round().clip(min(valid_keys), max(valid_keys)).astype(int)
+        counts = binned.value_counts().reindex(valid_keys, fill_value=0).reset_index()
         counts.columns = [feature, "count"]
         counts["label"] = counts[feature].map(label_map)
         category_order = [label_map[k] for k in valid_keys]
@@ -327,8 +316,7 @@ def build_distribution_plot(
             user_key = int(round(user_value))
             user_label = label_map.get(user_key, str(user_key))
             colors = [
-                "#e6550d" if x == user_label else "#1f77b4"
-                for x in counts["label"]
+                "#e6550d" if x == user_label else "#1f77b4" for x in counts["label"]
             ]
             fig.update_traces(marker_color=colors)
             fig.add_annotation(
@@ -396,9 +384,7 @@ def page_exploration() -> None:
 
     st.subheader("Feature distributions")
     if user_inputs is None:
-        st.info(
-            "Submit a prediction first to overlay your value on each distribution."
-        )
+        st.info("Submit a prediction first to overlay your value on each distribution.")
 
     peer_only = st.checkbox(
         "Compare to peer group (same gender, age ±5y)",
@@ -423,8 +409,7 @@ def page_exploration() -> None:
             plot_df = df
 
     feature_choices = [
-        f for f in FEATURE_ORDER
-        if f in df.columns and not f.startswith("MTRANS_")
+        f for f in FEATURE_ORDER if f in df.columns and not f.startswith("MTRANS_")
     ]
     if all(f in df.columns for f in MTRANS_FEATURES):
         feature_choices.append("MTRANS")
@@ -478,7 +463,9 @@ def page_ask_team() -> None:
             st.markdown(message)
 
     pending = st.session_state.pop("pending_question", None)
-    typed = st.chat_input("Ask anything about your risk, the dataset, or healthy habits…")
+    typed = st.chat_input(
+        "Ask anything about your risk, the dataset, or healthy habits…"
+    )
     question = pending or typed
 
     if not question:

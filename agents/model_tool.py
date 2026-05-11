@@ -139,8 +139,20 @@ def predict_obesity_risk(
     print("ML TOOL CALLED")
 
     data = _build_payload(
-        Age, Gender, family_history_with_overweight, FAVC, FCVC, NCP,
-        CAEC, SMOKE, CH2O, SCC, FAF, TUE, CALC, MTRANS,
+        Age,
+        Gender,
+        family_history_with_overweight,
+        FAVC,
+        FCVC,
+        NCP,
+        CAEC,
+        SMOKE,
+        CH2O,
+        SCC,
+        FAF,
+        TUE,
+        CALC,
+        MTRANS,
     )
 
     try:
@@ -183,8 +195,20 @@ def explain_obesity_risk(
     print("EXPLAIN TOOL CALLED")
 
     data = _build_payload(
-        Age, Gender, family_history_with_overweight, FAVC, FCVC, NCP,
-        CAEC, SMOKE, CH2O, SCC, FAF, TUE, CALC, MTRANS,
+        Age,
+        Gender,
+        family_history_with_overweight,
+        FAVC,
+        FCVC,
+        NCP,
+        CAEC,
+        SMOKE,
+        CH2O,
+        SCC,
+        FAF,
+        TUE,
+        CALC,
+        MTRANS,
     )
 
     try:
