@@ -7,14 +7,14 @@ from model_tool import explain_obesity_risk, predict_obesity_risk
 from rag_agent import search_knowledge_base
 
 
-YOUR_PROJECT_ID = "mlsd-487610"
+PROJECT_ID = "mlsd-487610"
 
 ml_agent = Agent(
     name="Obesity Predictor",
     model=Gemini(
         id="gemini-2.5-flash",
         vertexai=True,
-        project_id=YOUR_PROJECT_ID,
+        project_id=PROJECT_ID,
         location="europe-west1",
     ),
     tools=[predict_obesity_risk],
@@ -34,7 +34,7 @@ explain_agent = Agent(
     model=Gemini(
         id="gemini-2.5-flash",
         vertexai=True,
-        project_id=YOUR_PROJECT_ID,
+        project_id=PROJECT_ID,
         location="europe-west1",
     ),
     tools=[explain_obesity_risk],
@@ -54,7 +54,7 @@ rag_agent = Agent(
     model=Gemini(
         id="gemini-2.5-flash",
         vertexai=True,
-        project_id=YOUR_PROJECT_ID,
+        project_id=PROJECT_ID,
         location="europe-west1",
     ),
     tools=[search_knowledge_base],
@@ -85,7 +85,7 @@ web_agent = Agent(
     model=Gemini(
         id="gemini-2.5-flash",
         vertexai=True,
-        project_id=YOUR_PROJECT_ID,
+        project_id=PROJECT_ID,
         location="europe-west1",
     ),
     tools=[DuckDuckGoTools()],
@@ -109,7 +109,7 @@ team = Team(
     model=Gemini(
         id="gemini-2.5-flash",
         vertexai=True,
-        project_id=YOUR_PROJECT_ID,
+        project_id=PROJECT_ID,
         location="europe-west1",
     ),
     members=[ml_agent, explain_agent, rag_agent, web_agent],
