@@ -1,6 +1,6 @@
 # InsightWellness AI
 
-InsightWellness AI is a project developed for the INFO9023 Machine Learning Systems Design course at ULiège, designed to put MLOps concepts into practice. It combines a Random Forest model that predicts a user's obesity level from lifestyle data.
+InsightWellness AI is a project developed for the INFO9023 Machine Learning Systems Design course at ULiège, designed to put MLOps concepts into practice. It combines a `HistGradientBoostingClassifier` model that predicts a user's obesity level from lifestyle data, a Streamlit dashboard for interactive use, and a multi-agent assistant that lets users ask follow-up questions about their predictions.
 
 ## Project Structure
 
@@ -25,6 +25,10 @@ InsightWellness-AI/
 ├── uv.lock
 └── pyproject.toml
 ```
+
+## Model
+
+The production model is a `HistGradientBoostingClassifier` (scikit-learn), trained and tuned by the Vertex AI pipeline (`vertex/model_selection.py`, `vertex/training.py`) and stored in GCS as `model.joblib`.
 
 ## API
 
