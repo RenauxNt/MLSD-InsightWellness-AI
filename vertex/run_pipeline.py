@@ -62,6 +62,7 @@ if __name__ == "__main__":
         display_name="insightwellness-ml-pipeline",
         template_path="pipeline.json",
         pipeline_root=PIPELINE_ROOT,
+        enable_caching=False,
     )
 
     job.run()

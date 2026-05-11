@@ -47,9 +47,9 @@ Three models were evaluated to select the best approach. Each model was trained 
 
 ## 4. Final Model: HistGradientBoostingClassifier
 
-Gradient boosting was selected over Random Forest and Decision Tree based on the benchmark above — sequential trees that correct the errors of the previous one outperform bagging and single-tree baselines on this kind of structured tabular data.
+Gradient boosting was selected as the final approach. Unlike Random Forest (bagging), gradient-boosting models build trees sequentially, each correcting the errors of the previous one, which leads to better performance on structured tabular data.
 
-For the production pipeline we then switched from the standard `GradientBoostingClassifier` to `HistGradientBoostingClassifier`. The deal-maker was **native handling of categorical features**: our lifestyle data is heavily categorical (transportation mode, food between meals, family history, gender, snacking habits…), and HGB processes them directly through its `categorical_features` argument instead of forcing one-hot expansion. As a side benefit, histogram-based binning makes training noticeably faster.
+The implementation was switched from `GradientBoostingClassifier` to `HistGradientBoostingClassifier` (scikit-learn's histogram-based variant). Reason: SHAP's `TreeExplainer` does not support multiclass `GradientBoostingClassifier` (it only handles the binary case), but it does support the histogram-based variant. This is what unlocks the per-class SHAP explanations served by the `/explain` endpoint. `HistGradientBoostingClassifier` is also faster to train on this dataset size.
 
 ### Hyperparameter Tuning (GridSearchCV)
 
@@ -77,17 +77,17 @@ A grid search with 5-fold cross-validation was run over the following grid:
 
 | Metric              | Value  |
 |---------------------|--------|
-| Accuracy            | 82.03% |
-| F1-score (macro)    | 81.80% |
-| Precision (macro)   | 81.96% |
-| Recall (macro)      | 81.85% |
+| Accuracy            | 83.92% |
+| F1-score (macro)    | 83.98% |
+| Precision (macro)   | 84.29% |
+| Recall (macro)      | 84.02% |
 
 ### Cross-Validation (5-fold, on training set)
 
-| Metric            | Value   |
-|-------------------|---------|
-| F1-macro mean     | 81.71%  |
-| F1-macro std      | ±2.31%  |
+| Metric            | Value      |
+|-------------------|------------|
+| F1-macro mean     | 78.89%     |
+| F1-macro std      | ±4.9%     |
 
 ---
 

@@ -107,6 +107,7 @@ model = None
 explainer = None
 
 
+
 def load_model_artifacts():
     global model, FEATURE_ORDER, explainer
     print(f"Loading model from: {MODEL_PATH}")

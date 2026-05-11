@@ -13,7 +13,7 @@ TRAIN_CONFIG = {
     "random_state": 257,
     "param_grid": {
         "max_depth": [3, 5, 7],
-        "learning_rate": [0.05, 0.1, 0.2],
+        "learning_rate": [0.02, 0.05, 0.1, 0.2],
     },
 }
 
