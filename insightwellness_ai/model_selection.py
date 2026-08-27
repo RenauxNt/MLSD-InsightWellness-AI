@@ -1,10 +1,10 @@
-from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.model_selection import GridSearchCV
 
 
 def select_model(X_train, y_train, param_grid, n_estimators, random_state):
-    base_model = GradientBoostingClassifier(
-        n_estimators=n_estimators, random_state=random_state
+    base_model = HistGradientBoostingClassifier(
+        max_iter=n_estimators, random_state=random_state
     )
 
     grid_search = GridSearchCV(
