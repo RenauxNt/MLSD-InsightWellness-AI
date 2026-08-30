@@ -1,6 +1,11 @@
+import os
+
 import requests
 
-API_BASE_URL = "https://insightwellness-api-545205658175.europe-west1.run.app"
+API_BASE_URL = (
+    os.environ.get("INSIGHTWELLNESS_API_URL")
+    or "https://insightwellness-api-545205658175.europe-west1.run.app"
+)
 PREDICT_URL = f"{API_BASE_URL}/predict"
 EXPLAIN_URL = f"{API_BASE_URL}/explain"
 

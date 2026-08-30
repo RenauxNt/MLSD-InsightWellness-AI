@@ -20,7 +20,10 @@ import plotly.express as px
 import requests
 import streamlit as st
 
-DATA_PATH = "gs://mlops-2026-ramzan1/preprocessed/data_preprocessed.csv"
+GCS_BUCKET = os.environ.get("GCS_BUCKET") or "mlops-2026-ramzan1"
+DATA_PATH = (
+    os.environ.get("DATA_PATH") or f"gs://{GCS_BUCKET}/preprocessed/data_preprocessed.csv"
+)
 DEFAULT_API_URL = os.environ.get(
     "INSIGHTWELLNESS_API_URL",
     "https://insightwellness-api-545205658175.europe-west1.run.app",

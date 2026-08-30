@@ -101,7 +101,8 @@ CLASS_MAPPING = {
 }
 
 # --- Load Model ---
-MODEL_PATH = "gs://mlops-2026-ramzan1/models/model.joblib"
+GCS_BUCKET = os.environ.get("GCS_BUCKET") or "mlops-2026-ramzan1"
+MODEL_PATH = os.environ.get("MODEL_PATH") or f"gs://{GCS_BUCKET}/models/model.joblib"
 
 model = None
 explainer = None
