@@ -1,18 +1,14 @@
-import os
-
 from agno.agent import Agent
 from agno.team import Team
 from agno.models.google import Gemini
 from agno.tools.duckduckgo import DuckDuckGoTools
 
-from model_tool import explain_obesity_risk, predict_obesity_risk
-from rag_agent import search_knowledge_base
-
-
-# Same env vars/defaults as insightwellness_ai/config.py; the agent image
-# only ships agents/, so that package is not importable here.
-PROJECT_ID = os.environ.get("GCP_PROJECT_ID") or "mlsd-487610"
-LOCATION = os.environ.get("GCP_REGION") or "europe-west1"
+from insightwellness_ai.agents.model_tool import (
+    explain_obesity_risk,
+    predict_obesity_risk,
+)
+from insightwellness_ai.agents.rag_agent import search_knowledge_base
+from insightwellness_ai.config import LOCATION, PROJECT_ID
 
 ml_agent = Agent(
     name="Obesity Predictor",

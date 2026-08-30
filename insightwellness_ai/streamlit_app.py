@@ -6,7 +6,7 @@ Three pages:
 - Data exploration: shows distributions of each feature and overlays
   the user's last submitted values for context.
 - Ask the team: chat with the multi-agent team (predictor + RAG + web)
-  via the deployed agents service (/ask).
+  via the API's /chat endpoint.
 
 Run locally with:
     streamlit run insightwellness_ai/streamlit_app.py
@@ -22,13 +22,13 @@ import streamlit as st
 
 GCS_BUCKET = os.environ.get("GCS_BUCKET") or "mlops-2026-ramzan1"
 DATA_PATH = (
-    os.environ.get("DATA_PATH") or f"gs://{GCS_BUCKET}/preprocessed/data_preprocessed.csv"
+    os.environ.get("DATA_PATH")
+    or f"gs://{GCS_BUCKET}/preprocessed/data_preprocessed.csv"
 )
 DEFAULT_API_URL = os.environ.get(
     "INSIGHTWELLNESS_API_URL",
     "https://insightwellness-api-545205658175.europe-west1.run.app",
 )
-DEFAULT_AGENTS_URL = os.environ.get("INSIGHTWELLNESS_AGENTS_URL", "")
 
 CLASS_MAPPING = {
     0: "Insufficient_Weight",
@@ -132,12 +132,7 @@ def call_api(endpoint: str, payload: dict, params: dict | None = None) -> dict:
 
 
 def call_agents(question: str) -> str:
-    if not DEFAULT_AGENTS_URL:
-        raise RuntimeError(
-            "INSIGHTWELLNESS_AGENTS_URL is not set — deploy the agents service "
-            "and export the URL before using this page."
-        )
-    url = f"{DEFAULT_AGENTS_URL.rstrip('/')}/ask"
+    url = f"{DEFAULT_API_URL.rstrip('/')}/chat"
     response = requests.post(url, json={"question": question}, timeout=120)
     response.raise_for_status()
     return response.json().get("answer", "")
@@ -441,13 +436,6 @@ def page_ask_team() -> None:
         "a RAG agent grounded in the project knowledge base, and a web research "
         "agent for external context."
     )
-
-    if not DEFAULT_AGENTS_URL:
-        st.warning(
-            "Agents service URL is not configured. Set the "
-            "`INSIGHTWELLNESS_AGENTS_URL` environment variable to the deployed "
-            "service (e.g. `https://insightwellness-agents-…run.app`)."
-        )
 
     history = st.session_state.setdefault("chat_history", [])
 

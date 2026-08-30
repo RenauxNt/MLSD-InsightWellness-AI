@@ -27,7 +27,7 @@ def load_documents(directory):
     print(f"Loaded {len(documents)} chunks from {directory}")
 
 
-load_documents("data/")
+load_documents(os.environ.get("KNOWLEDGE_DIR") or "data/")
 
 
 def search_knowledge_base(query: str) -> str:
