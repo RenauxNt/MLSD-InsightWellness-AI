@@ -10,7 +10,7 @@ name: Deploy
 on:
   workflow_dispatch:
   push:
-    branches: [main, develop]  # TODO: remove develop after the CD test run
+    branches: [main]
 
 jobs:
   changes:
@@ -27,6 +27,9 @@ jobs:
         uses: dorny/paths-filter@v3
         id: filter
         with:
+          # Compare against the previous commit on the pushed branch;
+          # without this the action diffs against the repo default branch.
+          base: ${{ github.ref_name }}
           filters: |
             api:
               - 'insightwellness_ai/**'
