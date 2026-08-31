@@ -194,6 +194,7 @@ def index():
                 "GET /features": "View expected schema.",
                 "POST /predict": "Send patient data JSON for prediction.",
                 "POST /explain": "Send patient data JSON for prediction and SHAP feature impact explanation.",
+                "POST /chat": "Ask the multi-agent team a question about a prediction, the dataset, or healthy habits.",
                 "GET /apidocs": "View interactive Swagger documentation.",
             },
         }
