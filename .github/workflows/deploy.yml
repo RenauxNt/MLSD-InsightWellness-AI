@@ -1,0 +1,71 @@
+name: Deploy
+
+# Continuous deployment, gated and path-filtered:
+# - triggers on merge to main (push), never on an open PR
+# - lint + tests must pass before any image is built
+# - each service only redeploys when its own files changed
+# - every deploy ends with a health check against the live URL
+# Manual runs (workflow_dispatch) deploy all services, still test-gated.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  changes:
+    name: Detect changed services
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      streamlit: ${{ steps.filter.outputs.streamlit }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'insightwellness_ai/**'
+              - '!insightwellness_ai/streamlit_app.py'
+              - 'data/**'
+              - 'Dockerfile'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            streamlit:
+              - 'insightwellness_ai/streamlit_app.py'
+              - 'Dockerfile.streamlit'
+              - 'pyproject.toml'
+              - 'uv.lock'
+
+  tests:
+    uses: ./.github/workflows/tests.yml
+
+  deploy-api:
+    needs: [changes, tests]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.api == 'true'
+    uses: ./.github/workflows/deploy-cloud-run.yml
+    secrets: inherit
+    with:
+      service: insightwellness-api
+      dockerfile: Dockerfile
+      image_path: insightwellness/api
+      port: '8080'
+      memory: 2Gi
+      cpu_boost: true
+      health_path: /status
+
+  deploy-streamlit:
+    needs: [changes, tests]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.streamlit == 'true'
+    uses: ./.github/workflows/deploy-cloud-run.yml
+    secrets: inherit
+    with:
+      service: streamlit-app
+      dockerfile: Dockerfile.streamlit
+      image_path: insightwellness/streamlit-app
+      port: '8501'
+      health_path: /_stcore/health
