@@ -7,3 +7,4 @@ __pycache__
 *.json
 insightwellness_ai.egg-info
 milestones/ms4_progress.md
+.coverage
