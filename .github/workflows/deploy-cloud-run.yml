@@ -1,0 +1,109 @@
+name: Deploy Cloud Run service
+
+# Reusable build -> push -> deploy -> health check for one Cloud Run
+# service. Called by deploy.yml with per-service parameters, so the
+# deploy logic exists exactly once.
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        description: Cloud Run service name
+        required: true
+        type: string
+      dockerfile:
+        description: Dockerfile to build
+        required: true
+        type: string
+      image_path:
+        description: Artifact Registry path (repo/image)
+        required: true
+        type: string
+      port:
+        description: Container port
+        required: true
+        type: string
+      memory:
+        description: Cloud Run memory limit
+        required: false
+        type: string
+        default: 512Mi
+      cpu_boost:
+        description: Enable startup CPU boost
+        required: false
+        type: boolean
+        default: false
+      health_path:
+        description: Path to probe after deploy
+        required: false
+        type: string
+        default: /
+
+jobs:
+  deploy:
+    name: Build & deploy ${{ inputs.service }}
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION }}
+      IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ inputs.image_path }}:latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            -f ${{ inputs.dockerfile }} \
+            -t "$IMAGE" \
+            .
+
+      - name: Push Docker image
+        run: docker push "$IMAGE"
+
+      - name: Deploy to Cloud Run
+        run: |
+          EXTRA_FLAGS=""
+          if [ "${{ inputs.cpu_boost }}" = "true" ]; then
+            EXTRA_FLAGS="--cpu-boost"
+          fi
+          gcloud run deploy ${{ inputs.service }} \
+            --project="$PROJECT_ID" \
+            --image="$IMAGE" \
+            --region="$REGION" \
+            --port=${{ inputs.port }} \
+            --memory=${{ inputs.memory }} \
+            $EXTRA_FLAGS \
+            --set-env-vars=GCP_PROJECT_ID=$PROJECT_ID,GCP_REGION=$REGION,GCS_BUCKET=${{ vars.GCS_BUCKET }} \
+            --allow-unauthenticated
+
+      - name: Post-deploy health check
+        run: |
+          URL=$(gcloud run services describe ${{ inputs.service }} \
+            --project="$PROJECT_ID" --region="$REGION" \
+            --format='value(status.url)')
+          echo "Probing $URL${{ inputs.health_path }}"
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsS -m 30 "$URL${{ inputs.health_path }}"; then
+              echo "Service ${{ inputs.service }} is healthy."
+              exit 0
+            fi
+            echo "Attempt $attempt failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "::error::${{ inputs.service }} failed its health check after deploy"
+          exit 1
