@@ -38,6 +38,15 @@ on:
         required: false
         type: string
         default: /
+      concurrency:
+        description: >-
+          Max concurrent requests per instance. Must match what the
+          container can actually work on in parallel (gunicorn
+          workers x threads), otherwise Cloud Run queues requests
+          instead of scaling out. Empty keeps the platform default.
+        required: false
+        type: string
+        default: ""
 
 jobs:
   deploy:
@@ -80,6 +89,9 @@ jobs:
           EXTRA_FLAGS=""
           if [ "${{ inputs.cpu_boost }}" = "true" ]; then
             EXTRA_FLAGS="--cpu-boost"
+          fi
+          if [ -n "${{ inputs.concurrency }}" ]; then
+            EXTRA_FLAGS="$EXTRA_FLAGS --concurrency=${{ inputs.concurrency }}"
           fi
           gcloud run deploy ${{ inputs.service }} \
             --project="$PROJECT_ID" \
