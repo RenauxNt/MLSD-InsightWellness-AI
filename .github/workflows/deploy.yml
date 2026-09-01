@@ -61,6 +61,9 @@ jobs:
       memory: 2Gi
       cpu_boost: true
       health_path: /status
+      # Matches gunicorn capacity (1 worker x 8 threads); a higher
+      # value makes Cloud Run queue requests instead of scaling out.
+      concurrency: '8'
 
   deploy-streamlit:
     needs: [changes, tests]
