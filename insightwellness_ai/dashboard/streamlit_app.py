@@ -6,13 +6,15 @@ Three pages:
 - Data exploration: shows distributions of each feature and overlays
   the user's last submitted values for context.
 - Ask the team: chat with the multi-agent team (predictor + RAG + web)
-  via the API's /chat endpoint.
+  via the API's /chat endpoint, with client-side conversation memory
+  (hidden per-exchange summaries carried into the next question).
 
 Run locally with:
     streamlit run insightwellness_ai/dashboard/streamlit_app.py
 """
 
 import os
+import re
 
 import gcsfs
 import pandas as pd
@@ -131,16 +133,75 @@ def call_api(endpoint: str, payload: dict, params: dict | None = None) -> dict:
     return response.json()
 
 
-def call_agents(question: str) -> str:
+SUMMARY_PREFIX = "SUMMARY:"
+
+
+def call_agents(question: str, summaries: list[str]) -> tuple[str, str]:
+    """Ask the agent team one question, with conversation memory.
+
+    /chat is stateless, so continuity lives client-side: the agents are
+    asked to start every reply with a one-line SUMMARY of the exchange.
+    That line is stripped before display and collected in `summaries`,
+    which is prepended (hidden from the user) to the next question.
+    Returns (visible_answer, summary_of_this_exchange).
+    """
+    prompt = ""
+    if summaries:
+        prompt += (
+            "Context — summaries of the earlier exchanges in this "
+            "conversation, oldest first (not visible to the user):\n"
+            + "\n".join(f"- {s}" for s in summaries)
+            + "\n\n"
+        )
+    prompt += (
+        f"Start your reply with a single line '{SUMMARY_PREFIX} <one short "
+        "sentence summarising this question and your answer>'. That line is "
+        "stripped before the user sees the reply; everything after it is "
+        "shown verbatim.\n\n"
+        f"User question: {question}"
+    )
     url = f"{DEFAULT_API_URL.rstrip('/')}/chat"
-    response = requests.post(url, json={"question": question}, timeout=120)
+    response = requests.post(url, json={"question": prompt}, timeout=120)
     response.raise_for_status()
-    return response.json().get("answer", "")
+    answer = response.json().get("answer", "")
+
+    summary = None
+    kept_lines = []
+    for line in answer.splitlines():
+        if summary is None and line.strip().startswith(SUMMARY_PREFIX):
+            # The agents sometimes run the answer straight on after the
+            # summary sentence on the same line, so keep only the first
+            # sentence as summary and return the rest to the answer.
+            content = line.strip()[len(SUMMARY_PREFIX) :].strip()
+            parts = re.split(r"(?<=[.!?])\s*(?=[A-Z*#-])", content, maxsplit=1)
+            summary = parts[0][:200]
+            if len(parts) > 1 and parts[1]:
+                kept_lines.append(parts[1])
+        else:
+            kept_lines.append(line)
+    if summary is None:
+        # Agent ignored the format — fall back to remembering the question.
+        summary = f"User asked: {question[:120]}"
+    return "\n".join(kept_lines).strip(), summary
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def api_is_up(base_url: str) -> bool:
+    try:
+        r = requests.get(f"{base_url.rstrip('/')}/status", timeout=5)
+        return r.ok and r.json().get("status") == "available"
+    except requests.exceptions.RequestException:
+        return False
 
 
 def render_sidebar() -> str:
     st.sidebar.title("InsightWellness AI")
     st.sidebar.caption("Obesity-risk early warning")
+
+    if api_is_up(DEFAULT_API_URL):
+        st.sidebar.caption("🟢 API online — model loaded")
+    else:
+        st.sidebar.caption("🔴 API unreachable")
 
     return st.sidebar.radio(
         "Page",
@@ -256,34 +317,63 @@ def page_prediction() -> None:
     inputs = render_input_form()
     st.session_state["last_inputs"] = inputs
 
-    cols = st.columns([1, 1, 4])
-    with cols[0]:
-        run_predict = st.button("Predict", type="primary")
-    with cols[1]:
-        run_explain = st.button("Predict + Explain (SHAP)")
-
-    if run_predict:
-        try:
-            result = call_api("predict", inputs)
-            st.success(f"Predicted class: **{result['prediction']}**")
-            with st.expander("Raw response"):
-                st.json(result)
-        except requests.exceptions.RequestException as e:
-            st.error(f"API request failed: {e}")
-
-    if run_explain:
+    if st.button("Predict", type="primary"):
         try:
             result = call_api("explain", inputs, params={"top_n": 5})
-            st.success(f"Predicted class: **{result['prediction']}**")
-            if result.get("probabilities"):
-                render_probabilities(result["probabilities"])
-            drivers = result.get("explanation", {}).get("top_drivers", [])
-            if drivers:
-                render_shap_drivers(drivers)
-            with st.expander("Raw response"):
-                st.json(result)
         except requests.exceptions.RequestException as e:
             st.error(f"API request failed: {e}")
+            return
+
+        st.success(f"Predicted class: **{result['prediction']}**")
+        render_whatif_comparison(inputs, result["prediction"])
+        st.session_state["last_prediction"] = {
+            "inputs": inputs,
+            "prediction": result["prediction"],
+        }
+        if result.get("probabilities"):
+            render_probabilities(result["probabilities"])
+        drivers = result.get("explanation", {}).get("top_drivers", [])
+        if drivers:
+            render_shap_drivers(drivers)
+        with st.expander("Raw response"):
+            st.json(result)
+
+
+def _format_value(feature: str, value) -> str:
+    options = CATEGORICAL_OPTIONS.get(feature)
+    if options is not None:
+        return options.get(int(round(value)), str(value))
+    return f"{value:g}"
+
+
+def render_whatif_comparison(inputs: dict, prediction: str) -> None:
+    """Compare against the previous submission so users can play what-if:
+    change one habit, predict again, and see whether the class moved."""
+    prev = st.session_state.get("last_prediction")
+    if prev is None or prev["inputs"] == inputs:
+        return
+
+    changes = [
+        f"{FEATURE_LABELS.get(f, f)}: "
+        f"{_format_value(f, prev['inputs'][f])} → {_format_value(f, inputs[f])}"
+        for f in FEATURE_ORDER
+        if prev["inputs"].get(f) != inputs.get(f)
+    ]
+    if prev["prediction"] != prediction:
+        st.info(
+            f"**What-if:** your previous submission was "
+            f"**{prev['prediction']}** — with "
+            + "; ".join(changes)
+            + f", the prediction moved to **{prediction}**."
+        )
+    else:
+        st.info(
+            "**What-if:** still **"
+            + prediction
+            + "** despite changing "
+            + "; ".join(changes)
+            + "."
+        )
 
 
 def build_distribution_plot(df: pd.DataFrame, feature: str, user_value, template: str):
@@ -438,6 +528,7 @@ def page_ask_team() -> None:
     )
 
     history = st.session_state.setdefault("chat_history", [])
+    summaries = st.session_state.setdefault("chat_summaries", [])
 
     last_inputs = st.session_state.get("last_inputs")
     if last_inputs and not history:
@@ -469,7 +560,11 @@ def page_ask_team() -> None:
     with st.chat_message("assistant"):
         with st.spinner("The team is thinking…"):
             try:
-                answer = call_agents(question)
+                answer, summary = call_agents(question, summaries)
+                summaries.append(summary)
+                # Keep the hidden context bounded so long chats don't
+                # bloat every request to the agents.
+                del summaries[:-10]
             except (requests.exceptions.RequestException, RuntimeError) as e:
                 answer = f"Agents request failed: {e}"
         st.markdown(answer)
