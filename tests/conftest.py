@@ -15,6 +15,7 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 
 with patch("gcsfs.GCSFileSystem", side_effect=RuntimeError("gcs disabled in tests")):
     from insightwellness_ai.api import app as app_module
+    from insightwellness_ai.api import model_store
 
 FEATURE_ORDER = [
     "Gender",
@@ -79,9 +80,9 @@ def client(monkeypatch):
     model = HistGradientBoostingClassifier(max_iter=5, max_depth=2, random_state=0)
     model.fit(X, y)
 
-    monkeypatch.setattr(app_module, "model", model)
-    monkeypatch.setattr(app_module, "FEATURE_ORDER", FEATURE_ORDER)
-    monkeypatch.setattr(app_module, "explainer", shap.TreeExplainer(model))
+    monkeypatch.setattr(model_store, "model", model)
+    monkeypatch.setattr(model_store, "FEATURE_ORDER", FEATURE_ORDER)
+    monkeypatch.setattr(model_store, "explainer", shap.TreeExplainer(model))
 
     app_module.app.config["TESTING"] = True
     with app_module.app.test_client() as c:

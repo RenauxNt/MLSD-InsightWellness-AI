@@ -15,7 +15,7 @@ def training(
     from google.cloud import storage
 
     from insightwellness_ai.config import TRAIN_CONFIG, TARGET, BUCKET_NAME
-    from insightwellness_ai.training import train_model
+    from insightwellness_ai.pipeline.training import train_model
 
     N_ESTIMATORS = TRAIN_CONFIG["n_estimators"]
     RANDOM_STATE = TRAIN_CONFIG["random_state"]

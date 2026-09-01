@@ -33,13 +33,14 @@ jobs:
           filters: |
             api:
               - 'insightwellness_ai/**'
-              - '!insightwellness_ai/streamlit_app.py'
+              - '!insightwellness_ai/dashboard/**'
+              - '!insightwellness_ai/pipeline/**'
               - 'data/**'
               - 'Dockerfile'
               - 'pyproject.toml'
               - 'uv.lock'
             streamlit:
-              - 'insightwellness_ai/streamlit_app.py'
+              - 'insightwellness_ai/dashboard/**'
               - 'Dockerfile.streamlit'
               - 'pyproject.toml'
               - 'uv.lock'

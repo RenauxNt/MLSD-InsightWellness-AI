@@ -9,7 +9,7 @@ Three pages:
   via the API's /chat endpoint.
 
 Run locally with:
-    streamlit run insightwellness_ai/streamlit_app.py
+    streamlit run insightwellness_ai/dashboard/streamlit_app.py
 """
 
 import os

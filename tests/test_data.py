@@ -10,7 +10,7 @@ from pathlib import Path
 import yaml
 
 from insightwellness_ai import config
-from insightwellness_ai.api.app import CLASS_MAPPING
+from insightwellness_ai.api.schema import CLASS_MAPPING
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

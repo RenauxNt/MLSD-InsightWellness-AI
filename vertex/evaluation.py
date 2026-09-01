@@ -17,7 +17,7 @@ def evaluation(
     import os
 
     from insightwellness_ai.config import TARGET
-    from insightwellness_ai.evaluation import evaluate_model
+    from insightwellness_ai.pipeline.evaluation import evaluate_model
 
     df = pd.read_parquet(test_dataset.path)
     X_test = df.drop(columns=[TARGET])
