@@ -1,6 +1,7 @@
 """Tests for /predict and the info endpoints (/, /status, /features)."""
 
-from insightwellness_ai.api import app as app_module
+from insightwellness_ai.api import model_store
+from insightwellness_ai.api.schema import CLASS_MAPPING
 
 
 def test_predict_happy_path(client, valid_payload):
@@ -8,7 +9,7 @@ def test_predict_happy_path(client, valid_payload):
     assert resp.status_code == 200
     body = resp.get_json()
     assert body["status"] == "success"
-    assert body["prediction"] in app_module.CLASS_MAPPING.values()
+    assert body["prediction"] in CLASS_MAPPING.values()
     assert isinstance(body["prediction_code"], int)
     assert 0 <= body["prediction_code"] <= 6
 
@@ -47,7 +48,7 @@ def test_predict_mtrans_conflict(client, valid_payload):
 
 
 def test_predict_model_not_loaded(client, valid_payload, monkeypatch):
-    monkeypatch.setattr(app_module, "model", None)
+    monkeypatch.setattr(model_store, "model", None)
     resp = client.post("/predict", json=valid_payload)
     assert resp.status_code == 500
 
@@ -59,7 +60,7 @@ def test_status_available(client):
 
 
 def test_status_unavailable_without_model(client, monkeypatch):
-    monkeypatch.setattr(app_module, "model", None)
+    monkeypatch.setattr(model_store, "model", None)
     resp = client.get("/status")
     assert resp.status_code == 500
     assert resp.get_json()["status"] == "unavailable"

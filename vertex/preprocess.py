@@ -12,7 +12,7 @@ def preprocess(
     import pandas as pd
     import logging
 
-    from insightwellness_ai.preprocess import preprocess_data
+    from insightwellness_ai.pipeline.preprocess import preprocess_data
     from insightwellness_ai.config import TEST_SIZE, RANDOM_STATE, STRATIFY
 
     logging.basicConfig(

@@ -1,6 +1,6 @@
 """Tests for /explain (SHAP-based explanation endpoint)."""
 
-from insightwellness_ai.api import app as app_module
+from insightwellness_ai.api import model_store
 
 
 def test_explain_happy_path(client, valid_payload):
@@ -61,6 +61,6 @@ def test_explain_mtrans_conflict(client, valid_payload):
 
 
 def test_explain_model_not_loaded(client, valid_payload, monkeypatch):
-    monkeypatch.setattr(app_module, "model", None)
+    monkeypatch.setattr(model_store, "model", None)
     resp = client.post("/explain", json=valid_payload)
     assert resp.status_code == 500

@@ -12,7 +12,7 @@ def model_selection(
     import json
 
     from insightwellness_ai.config import TRAIN_CONFIG, TARGET
-    from insightwellness_ai.model_selection import select_model
+    from insightwellness_ai.pipeline.model_selection import select_model
 
     N_ESTIMATORS = TRAIN_CONFIG["n_estimators"]
     RANDOM_STATE = TRAIN_CONFIG["random_state"]

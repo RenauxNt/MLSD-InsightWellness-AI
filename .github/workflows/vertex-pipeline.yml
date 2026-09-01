@@ -11,10 +11,7 @@ on:
     paths:
       - 'vertex/**'
       - 'insightwellness_ai/config.py'
-      - 'insightwellness_ai/preprocess.py'
-      - 'insightwellness_ai/training.py'
-      - 'insightwellness_ai/evaluation.py'
-      - 'insightwellness_ai/model_selection.py'
+      - 'insightwellness_ai/pipeline/**'
       - 'Dockerfile.vertex'
       - 'params.yaml'
 

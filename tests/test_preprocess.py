@@ -9,8 +9,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from insightwellness_ai.api.app import EXPECTED_MODEL_SCHEMA
-from insightwellness_ai.preprocess import preprocess_data
+from insightwellness_ai.api.schema import EXPECTED_MODEL_SCHEMA
+from insightwellness_ai.pipeline.preprocess import preprocess_data
 
 RAW_CLASSES = [
     "Insufficient_Weight",
