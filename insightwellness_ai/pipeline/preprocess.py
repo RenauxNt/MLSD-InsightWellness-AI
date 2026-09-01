@@ -1,6 +1,9 @@
-import pandas as pd
 import logging
+
+import pandas as pd
 from sklearn.model_selection import train_test_split
+
+from insightwellness_ai.api.schema import CLASS_LABELS
 
 logger = logging.getLogger(__name__)
 
@@ -32,15 +35,8 @@ def preprocess_data(raw_df, test_size, random_state, stratify):
             logger.warning("Unmapped values in %s: %s", col, unmapped)
         raw_df[col] = raw_df[col].map(caec_calc_mapping).astype("Int64")
 
-    obesity_mapping = {
-        "insufficient_weight": 0,
-        "normal_weight": 1,
-        "overweight_level_i": 2,
-        "overweight_level_ii": 3,
-        "obesity_type_i": 4,
-        "obesity_type_ii": 5,
-        "obesity_type_iii": 6,
-    }
+    # raw CSV labels are the lowercased API class labels
+    obesity_mapping = {label.lower(): i for i, label in enumerate(CLASS_LABELS)}
     unmapped = set(raw_df["NObeyesdad"].dropna().unique()) - set(obesity_mapping.keys())
     if unmapped:
         logger.warning("Unmapped values in NObeyesdad: %s", unmapped)

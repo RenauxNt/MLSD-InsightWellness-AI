@@ -6,8 +6,7 @@ Three pages:
 - Data exploration: shows distributions of each feature and overlays
   the user's last submitted values for context.
 - Ask the team: chat with the multi-agent team (predictor + RAG + web)
-  via the API's /chat endpoint, with client-side conversation memory
-  (hidden per-exchange summaries carried into the next question).
+  via the API's /chat endpoint. Memory is client-side (see call_agents).
 
 Run locally with:
     streamlit run insightwellness_ai/dashboard/streamlit_app.py
@@ -17,6 +16,7 @@ import os
 import re
 
 import gcsfs
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import requests
@@ -110,13 +110,13 @@ CATEGORICAL_OPTIONS = {
 }
 
 MTRANS_FEATURES = [f for f in FEATURE_ORDER if f.startswith("MTRANS_")]
+# code 0 = public transport = no one-hot column set
 MTRANS_LABEL_TO_KEY = {
-    "Public transportation": None,
-    "Automobile": "MTRANS_automobile",
-    "Motorbike": "MTRANS_motorbike",
-    "Bike": "MTRANS_bike",
-    "Walking": "MTRANS_walking",
+    label: (MTRANS_FEATURES[code - 1] if code else None)
+    for code, label in CATEGORICAL_OPTIONS["MTRANS"].items()
 }
+
+TEMPLATE = "plotly_white"
 
 
 @st.cache_data(show_spinner="Loading dataset from GCS...")
@@ -126,9 +126,14 @@ def load_dataset(path: str) -> pd.DataFrame:
         return pd.read_csv(f)
 
 
-def call_api(endpoint: str, payload: dict, params: dict | None = None) -> dict:
+_session = requests.Session()
+
+
+def call_api(
+    endpoint: str, payload: dict, params: dict | None = None, timeout: int = 30
+) -> dict:
     url = f"{DEFAULT_API_URL.rstrip('/')}/{endpoint.lstrip('/')}"
-    response = requests.post(url, json=payload, params=params, timeout=30)
+    response = _session.post(url, json=payload, params=params, timeout=timeout)
     response.raise_for_status()
     return response.json()
 
@@ -137,14 +142,9 @@ SUMMARY_PREFIX = "SUMMARY:"
 
 
 def call_agents(question: str, summaries: list[str]) -> tuple[str, str]:
-    """Ask the agent team one question, with conversation memory.
-
-    /chat is stateless, so continuity lives client-side: the agents are
-    asked to start every reply with a one-line SUMMARY of the exchange.
-    That line is stripped before display and collected in `summaries`,
-    which is prepended (hidden from the user) to the next question.
-    Returns (visible_answer, summary_of_this_exchange).
-    """
+    """Ask the team one question. /chat is stateless: each reply opens with
+    a SUMMARY line, stripped here and fed back on the next question.
+    Returns (visible_answer, summary)."""
     prompt = ""
     if summaries:
         prompt += (
@@ -160,18 +160,14 @@ def call_agents(question: str, summaries: list[str]) -> tuple[str, str]:
         "shown verbatim.\n\n"
         f"User question: {question}"
     )
-    url = f"{DEFAULT_API_URL.rstrip('/')}/chat"
-    response = requests.post(url, json={"question": prompt}, timeout=120)
-    response.raise_for_status()
-    answer = response.json().get("answer", "")
+    answer = call_api("chat", {"question": prompt}, timeout=120).get("answer", "")
 
     summary = None
     kept_lines = []
     for line in answer.splitlines():
         if summary is None and line.strip().startswith(SUMMARY_PREFIX):
-            # The agents sometimes run the answer straight on after the
-            # summary sentence on the same line, so keep only the first
-            # sentence as summary and return the rest to the answer.
+            # agents may cram the answer onto the SUMMARY line: keep the
+            # first sentence, give back the rest
             content = line.strip()[len(SUMMARY_PREFIX) :].strip()
             parts = re.split(r"(?<=[.!?])\s*(?=[A-Z*#-])", content, maxsplit=1)
             summary = parts[0][:200]
@@ -188,7 +184,7 @@ def call_agents(question: str, summaries: list[str]) -> tuple[str, str]:
 @st.cache_data(ttl=60, show_spinner=False)
 def api_is_up(base_url: str) -> bool:
     try:
-        r = requests.get(f"{base_url.rstrip('/')}/status", timeout=5)
+        r = _session.get(f"{base_url.rstrip('/')}/status", timeout=5)
         return r.ok and r.json().get("status") == "available"
     except requests.exceptions.RequestException:
         return False
@@ -324,9 +320,7 @@ def page_prediction() -> None:
             st.error(f"API request failed: {e}")
             return
 
-        # Deliberately neutral presentation: no color coding on weight
-        # classes — the app reports the model's output, it does not
-        # judge bodies.
+        # neutral on purpose: report the model's output, don't color-judge it
         st.markdown(f"### Predicted class: {result['prediction']}")
         render_whatif_comparison(inputs, result["prediction"])
         st.session_state["last_prediction"] = {
@@ -350,8 +344,7 @@ def _format_value(feature: str, value) -> str:
 
 
 def render_whatif_comparison(inputs: dict, prediction: str) -> None:
-    """Compare against the previous submission so users can play what-if:
-    change one habit, predict again, and see whether the class moved."""
+    """Diff against the previous submission: change a habit, see the effect."""
     prev = st.session_state.get("last_prediction")
     if prev is None or prev["inputs"] == inputs:
         return
@@ -379,7 +372,7 @@ def render_whatif_comparison(inputs: dict, prediction: str) -> None:
         )
 
 
-def build_distribution_plot(df: pd.DataFrame, feature: str, user_value, template: str):
+def build_distribution_plot(df: pd.DataFrame, feature: str, user_value):
     label_map = CATEGORICAL_OPTIONS.get(feature)
     friendly = FEATURE_LABELS.get(feature, feature)
 
@@ -397,7 +390,7 @@ def build_distribution_plot(df: pd.DataFrame, feature: str, user_value, template
             counts,
             x="label",
             y="count",
-            template=template,
+            template=TEMPLATE,
             title=f"Distribution of {friendly}",
             labels={"label": friendly, "count": "Count"},
             category_orders={"label": category_order},
@@ -417,7 +410,7 @@ def build_distribution_plot(df: pd.DataFrame, feature: str, user_value, template
                 x=0.5,
                 y=1.08,
                 showarrow=False,
-                font=dict(color="#e6550d"),
+                font={"color": "#e6550d"},
             )
         return fig
 
@@ -426,7 +419,7 @@ def build_distribution_plot(df: pd.DataFrame, feature: str, user_value, template
         df,
         x=feature,
         nbins=40,
-        template=template,
+        template=TEMPLATE,
         title=f"Distribution of {friendly}",
         labels={feature: friendly},
     )
@@ -453,7 +446,6 @@ def page_exploration() -> None:
     st.title("Data exploration")
     df = load_dataset(DATA_PATH)
 
-    template = "plotly_white"
     user_inputs = st.session_state.get("last_inputs")
 
     with st.expander("Preview the dataset"):
@@ -467,7 +459,7 @@ def page_exploration() -> None:
         class_counts,
         x="class",
         y="count",
-        template=template,
+        template=TEMPLATE,
         title="Obesity class balance",
         category_orders={"class": class_order},
     )
@@ -511,13 +503,14 @@ def page_exploration() -> None:
         format_func=lambda f: FEATURE_LABELS.get(f, f),
     )
     if feature == "MTRANS":
-        plot_df = plot_df.copy()
-        plot_df["MTRANS"] = plot_df[MTRANS_FEATURES].apply(_transport_code, axis=1)
+        onehots = plot_df[MTRANS_FEATURES].to_numpy() >= 0.5
+        codes = np.where(onehots.any(axis=1), onehots.argmax(axis=1) + 1, 0)
+        plot_df = plot_df.assign(MTRANS=codes)
         user_value = _transport_code(user_inputs) if user_inputs else None
     else:
         user_value = user_inputs.get(feature) if user_inputs else None
     st.plotly_chart(
-        build_distribution_plot(plot_df, feature, user_value, template),
+        build_distribution_plot(plot_df, feature, user_value),
         width="stretch",
     )
 
@@ -565,9 +558,7 @@ def page_ask_team() -> None:
             try:
                 answer, summary = call_agents(question, summaries)
                 summaries.append(summary)
-                # Keep the hidden context bounded so long chats don't
-                # bloat every request to the agents.
-                del summaries[:-10]
+                del summaries[:-10]  # keep the hidden context bounded
             except (requests.exceptions.RequestException, RuntimeError) as e:
                 answer = f"Agents request failed: {e}"
         st.markdown(answer)

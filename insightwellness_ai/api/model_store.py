@@ -1,9 +1,5 @@
-"""Holds the loaded model artifacts (model, feature order, SHAP explainer).
-
-Always access these through the module (`model_store.model`), never via
-`from model_store import model`: the from-import would freeze the value at
-import time and miss both the startup load and test monkeypatching.
-"""
+"""Loaded model artifacts. Access as `model_store.model`, never
+`from model_store import model` — that freezes the value at import time."""
 
 import os
 
@@ -11,8 +7,9 @@ import gcsfs
 import joblib
 import shap
 
-GCS_BUCKET = os.environ.get("GCS_BUCKET") or "mlops-2026-ramzan1"
-MODEL_PATH = os.environ.get("MODEL_PATH") or f"gs://{GCS_BUCKET}/models/model.joblib"
+from insightwellness_ai.config import MODEL_URI
+
+MODEL_PATH = os.environ.get("MODEL_PATH") or MODEL_URI
 
 model = None
 FEATURE_ORDER = None

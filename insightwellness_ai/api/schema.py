@@ -65,13 +65,43 @@ EXPECTED_MODEL_SCHEMA = {
     },
 }
 
-# Translates the model's numeric output back to readable labels
-CLASS_MAPPING = {
-    0: "Insufficient_Weight",
-    1: "Normal_Weight",
-    2: "Overweight_Level_I",
-    3: "Overweight_Level_II",
-    4: "Obesity_Type_I",
-    5: "Obesity_Type_II",
-    6: "Obesity_Type_III",
-}
+MTRANS_FEATURES = [f for f in EXPECTED_MODEL_SCHEMA if f.startswith("MTRANS_")]
+
+# CLASS_MAPPING and the pipeline's CSV mapping both derive from this
+CLASS_LABELS = (
+    "Insufficient_Weight",
+    "Normal_Weight",
+    "Overweight_Level_I",
+    "Overweight_Level_II",
+    "Obesity_Type_I",
+    "Obesity_Type_II",
+    "Obesity_Type_III",
+)
+
+CLASS_MAPPING = dict(enumerate(CLASS_LABELS))
+
+
+def patient_data_definition() -> dict:
+    """Swagger 'PatientData' body definition, generated from the schema."""
+    properties = {}
+    for name, spec in EXPECTED_MODEL_SCHEMA.items():
+        valid_values = spec["valid_values"]
+        if isinstance(valid_values, list):
+            properties[name] = {
+                "type": "integer",
+                "enum": valid_values,
+                "description": spec["description"],
+                # first valid value keeps the example payload itself valid
+                "example": valid_values[0],
+            }
+        else:
+            properties[name] = {
+                "type": "number",
+                "description": spec["description"],
+                "example": 25.5,
+            }
+    return {
+        "type": "object",
+        "required": list(EXPECTED_MODEL_SCHEMA),
+        "properties": properties,
+    }

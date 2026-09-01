@@ -13,11 +13,10 @@ from insightwellness_ai.api import model_store
 from insightwellness_ai.api.routes_chat import chat_bp
 from insightwellness_ai.api.routes_info import info_bp
 from insightwellness_ai.api.routes_prediction import prediction_bp
+from insightwellness_ai.api.schema import patient_data_definition
 
 app = Flask(__name__)
 
-# Initialize Flasgger
-# This automatically creates a Swagger UI at /apidocs
 swagger = Swagger(
     app,
     template={
@@ -25,7 +24,8 @@ swagger = Swagger(
             "title": "InsightWellness API",
             "description": "API for predicting obesity risk levels based on patient data.",
             "version": "1.0.0",
-        }
+        },
+        "definitions": {"PatientData": patient_data_definition()},
     },
 )
 

@@ -1,18 +1,18 @@
-from kfp import dsl, compiler
 from google.cloud import aiplatform
+from kfp import compiler, dsl
 
 from insightwellness_ai.config import (
-    PIPELINE_ROOT,
-    PROJECT_ID,
     BQ_DATASET,
     BQ_RAW_TABLE,
     LOCATION,
+    PIPELINE_ROOT,
+    PROJECT_ID,
 )
 from vertex.data_ingestion import data_ingestion
-from vertex.preprocess import preprocess
-from vertex.model_selection import model_selection
-from vertex.training import training
 from vertex.evaluation import evaluation
+from vertex.model_selection import model_selection
+from vertex.preprocess import preprocess
+from vertex.training import training
 
 
 @dsl.pipeline(

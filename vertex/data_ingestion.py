@@ -1,5 +1,6 @@
 # src/data_ingestion.py
-from kfp.dsl import component, Output, Dataset
+from kfp.dsl import Dataset, Output, component
+
 from insightwellness_ai.config import BASE_IMAGE
 
 

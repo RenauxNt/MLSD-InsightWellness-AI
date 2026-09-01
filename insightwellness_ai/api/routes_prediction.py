@@ -1,5 +1,6 @@
 """Prediction endpoints: /predict and its SHAP-explained variant /explain."""
 
+import numpy as np
 import pandas as pd
 from flask import Blueprint, jsonify, request
 
@@ -8,6 +9,18 @@ from insightwellness_ai.api.schema import CLASS_MAPPING
 from insightwellness_ai.api.validation import validate_payload
 
 prediction_bp = Blueprint("prediction", __name__)
+
+
+def _prepare_input(data):
+    """Returns (error, None, None) on bad payload, else (None, ordered_input, input_df)."""
+    error = validate_payload(data)
+    if error is not None:
+        return error, None, None
+
+    feature_order = model_store.FEATURE_ORDER
+    ordered_input = {f: data[f] for f in feature_order}
+    input_df = pd.DataFrame([ordered_input], columns=feature_order)
+    return None, ordered_input, input_df
 
 
 @prediction_bp.route("/predict", methods=["POST"])
@@ -24,59 +37,7 @@ def predict():
         description: JSON dictionary containing patient metrics.
         required: true
         schema:
-          type: object
-          properties:
-            Gender:
-              type: integer
-              example: 1
-            Age:
-              type: number
-              example: 25.5
-            family_history_with_overweight:
-              type: integer
-              example: 1
-            FAVC:
-              type: integer
-              example: 1
-            FCVC:
-              type: integer
-              example: 2
-            NCP:
-              type: integer
-              example: 3
-            CAEC:
-              type: integer
-              example: 1
-            SMOKE:
-              type: integer
-              example: 0
-            CH2O:
-              type: integer
-              example: 2
-            SCC:
-              type: integer
-              example: 0
-            FAF:
-              type: integer
-              example: 1
-            TUE:
-              type: integer
-              example: 1
-            CALC:
-              type: integer
-              example: 1
-            MTRANS_automobile:
-              type: integer
-              example: 1
-            MTRANS_motorbike:
-              type: integer
-              example: 0
-            MTRANS_bike:
-              type: integer
-              example: 0
-            MTRANS_walking:
-              type: integer
-              example: 0
+          $ref: '#/definitions/PatientData'
     responses:
       200:
         description: Successful prediction.
@@ -89,15 +50,9 @@ def predict():
         return jsonify({"error": "Model not loaded."}), 500
 
     try:
-        data = request.get_json()
-
-        error = validate_payload(data)
+        error, _, input_df = _prepare_input(request.get_json())
         if error is not None:
             return error
-
-        feature_order = model_store.FEATURE_ORDER
-        ordered_input = {f: data[f] for f in feature_order}
-        input_df = pd.DataFrame([ordered_input], columns=feature_order)
 
         pred_index = int(model_store.model.predict(input_df).tolist()[0])
         predicted_class = CLASS_MAPPING.get(pred_index, "Unknown Class")
@@ -129,65 +84,13 @@ def explain():
         type: integer
         required: false
         default: 5
-        description: Number of top driver features to return (clamped to [1, 17]).
+        description: Number of top driver features to return (clamped to the feature count).
       - in: body
         name: patient_data
         description: JSON dictionary containing patient metrics (same schema as /predict).
         required: true
         schema:
-          type: object
-          properties:
-            Gender:
-              type: integer
-              example: 1
-            Age:
-              type: number
-              example: 25.5
-            family_history_with_overweight:
-              type: integer
-              example: 1
-            FAVC:
-              type: integer
-              example: 1
-            FCVC:
-              type: integer
-              example: 2
-            NCP:
-              type: integer
-              example: 3
-            CAEC:
-              type: integer
-              example: 1
-            SMOKE:
-              type: integer
-              example: 0
-            CH2O:
-              type: integer
-              example: 2
-            SCC:
-              type: integer
-              example: 0
-            FAF:
-              type: integer
-              example: 1
-            TUE:
-              type: integer
-              example: 1
-            CALC:
-              type: integer
-              example: 1
-            MTRANS_automobile:
-              type: integer
-              example: 1
-            MTRANS_motorbike:
-              type: integer
-              example: 0
-            MTRANS_bike:
-              type: integer
-              example: 0
-            MTRANS_walking:
-              type: integer
-              example: 0
+          $ref: '#/definitions/PatientData'
     responses:
       200:
         description: Successful prediction with SHAP explanation.
@@ -204,9 +107,7 @@ def explain():
         return jsonify({"error": "Model not loaded."}), 500
 
     try:
-        data = request.get_json()
-
-        error = validate_payload(data)
+        error, ordered_input, input_df = _prepare_input(request.get_json())
         if error is not None:
             return error
 
@@ -214,13 +115,11 @@ def explain():
         top_n = request.args.get("top_n", default=5, type=int) or 5
         top_n = max(1, min(top_n, len(feature_order)))
 
-        ordered_input = {f: data[f] for f in feature_order}
-        input_df = pd.DataFrame([ordered_input], columns=feature_order)
-
-        pred_index = int(model_store.model.predict(input_df).tolist()[0])
+        # argmax(proba) == predict(); avoids a second ensemble traversal
+        proba = model_store.model.predict_proba(input_df)[0]
+        pred_index = int(np.argmax(proba))
         predicted_class = CLASS_MAPPING.get(pred_index, "Unknown Class")
 
-        proba = model_store.model.predict_proba(input_df)[0].tolist()
         probabilities = {
             CLASS_MAPPING.get(i, str(i)): round(float(p), 4)
             for i, p in enumerate(proba)
@@ -241,7 +140,7 @@ def explain():
                 "impact_score": round(float(impact), 4),
                 "input_value": ordered_input[feature],
             }
-            for feature, impact in zip(feature_order, class_shap_values)
+            for feature, impact in zip(feature_order, class_shap_values, strict=True)
         ]
 
         feature_impacts.sort(key=lambda x: abs(x["impact_score"]), reverse=True)

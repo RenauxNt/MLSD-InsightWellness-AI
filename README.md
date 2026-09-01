@@ -21,7 +21,7 @@ InsightWellness-AI/
 ├── .pre-commit-config.yaml
 ├── Dockerfile                          # Dockerfile for API
 ├── Dockerfile.vertex                   # Dockerfile for Vertex AI pipeline
-├── params.yaml                         # Centralised config (data paths, hyperparameters)
+├── params.yaml                         # Notebook-facing mirror of config.py (sync enforced by tests)
 ├── uv.lock
 └── pyproject.toml
 ```

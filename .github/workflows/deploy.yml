@@ -61,8 +61,7 @@ jobs:
       memory: 2Gi
       cpu_boost: true
       health_path: /status
-      # Matches gunicorn capacity (1 worker x 8 threads); a higher
-      # value makes Cloud Run queue requests instead of scaling out.
+      # must match gunicorn capacity (1 worker x 8 threads in Dockerfile)
       concurrency: '8'
 
   deploy-streamlit:

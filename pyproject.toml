@@ -75,9 +75,9 @@ exclude = [
 line-length = 88
 indent-width = 4
 
-target-version = "py310"
+target-version = "py311"
 
-[lint]
+[tool.ruff.lint]
 select = [
     "E", # pycodestyle errors
     "W", # pycodestyle warnings
@@ -94,10 +94,10 @@ ignore = [
 
 fixable = ["ALL"]
 
-[lint.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["insightwellness_ai"]
 
-[format]
+[tool.ruff.format]
 quote-style = "double"
 
 indent-style = "space"
