@@ -324,7 +324,10 @@ def page_prediction() -> None:
             st.error(f"API request failed: {e}")
             return
 
-        st.success(f"Predicted class: **{result['prediction']}**")
+        # Deliberately neutral presentation: no color coding on weight
+        # classes — the app reports the model's output, it does not
+        # judge bodies.
+        st.markdown(f"### Predicted class: {result['prediction']}")
         render_whatif_comparison(inputs, result["prediction"])
         st.session_state["last_prediction"] = {
             "inputs": inputs,
