@@ -181,23 +181,9 @@ def call_agents(question: str, summaries: list[str]) -> tuple[str, str]:
     return "\n".join(kept_lines).strip(), summary
 
 
-@st.cache_data(ttl=60, show_spinner=False)
-def api_is_up(base_url: str) -> bool:
-    try:
-        r = _session.get(f"{base_url.rstrip('/')}/status", timeout=5)
-        return r.ok and r.json().get("status") == "available"
-    except requests.exceptions.RequestException:
-        return False
-
-
 def render_sidebar() -> str:
     st.sidebar.title("InsightWellness AI")
     st.sidebar.caption("Obesity-risk early warning")
-
-    if api_is_up(DEFAULT_API_URL):
-        st.sidebar.caption("🟢 API online — model loaded")
-    else:
-        st.sidebar.caption("🔴 API unreachable")
 
     return st.sidebar.radio(
         "Page",

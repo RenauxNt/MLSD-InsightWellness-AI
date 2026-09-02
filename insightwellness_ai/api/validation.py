@@ -28,7 +28,7 @@ def validate_payload(data):
                     }
                 ), 400
             elif isinstance(valid_values, str) and "Numeric" in valid_values:
-                if not isinstance(value, (int, float)):
+                if not isinstance(value, int | float):
                     return jsonify(
                         {
                             "error": f"Invalid type for '{key}'. Expected number, got {type(value).__name__}."
