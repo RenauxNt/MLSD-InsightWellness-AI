@@ -3,7 +3,7 @@
 from flask import jsonify
 
 from insightwellness_ai.api import model_store
-from insightwellness_ai.api.schema import EXPECTED_MODEL_SCHEMA
+from insightwellness_ai.api.schema import EXPECTED_MODEL_SCHEMA, MTRANS_FEATURES
 
 
 def validate_payload(data):
@@ -35,13 +35,7 @@ def validate_payload(data):
                         }
                     ), 400
 
-    mtrans_columns = [
-        "MTRANS_automobile",
-        "MTRANS_motorbike",
-        "MTRANS_bike",
-        "MTRANS_walking",
-    ]
-    mtrans_sum = sum(data.get(col, 0) for col in mtrans_columns if col in data)
+    mtrans_sum = sum(data.get(col, 0) for col in MTRANS_FEATURES if col in data)
     if mtrans_sum > 1:
         return jsonify(
             {"error": "Invalid transportation data. Max ONE main MTRANS mode allowed."}

@@ -8,8 +8,7 @@ _agent_team = None
 
 
 def get_agent_team():
-    # Lazy import: loading the team pulls in agno/chromadb and indexes the
-    # knowledge base, which must not slow down or break API startup.
+    # lazy: importing the team pulls in agno/chromadb, keep startup fast
     global _agent_team
     if _agent_team is None:
         from insightwellness_ai.agents.team import team

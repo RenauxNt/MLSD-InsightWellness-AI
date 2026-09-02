@@ -1,9 +1,5 @@
-"""Shared fixtures for the API tests.
-
-The app module is imported here, before any test module, with GCS blocked:
-loading the real model from Cloud Storage at import time would hang (or
-require credentials) in CI. Tests get a small trained stand-in model instead.
-"""
+"""API test fixtures. The app is imported with GCS blocked — the real
+model load would need credentials in CI; tests use a stand-in model."""
 
 from unittest.mock import patch
 
@@ -68,8 +64,9 @@ def valid_payload():
     return dict(VALID_PAYLOAD)
 
 
-@pytest.fixture
-def client(monkeypatch):
+@pytest.fixture(scope="session")
+def _stand_in_artifacts():
+    """Stand-in model + explainer, built once per test run."""
     rng = np.random.default_rng(42)
     n = 200
     X = pd.DataFrame({col: rng.integers(0, 4, size=n) for col in FEATURE_ORDER})
@@ -79,10 +76,15 @@ def client(monkeypatch):
 
     model = HistGradientBoostingClassifier(max_iter=5, max_depth=2, random_state=0)
     model.fit(X, y)
+    return model, shap.TreeExplainer(model)
 
+
+@pytest.fixture
+def client(monkeypatch, _stand_in_artifacts):
+    model, explainer = _stand_in_artifacts
     monkeypatch.setattr(model_store, "model", model)
     monkeypatch.setattr(model_store, "FEATURE_ORDER", FEATURE_ORDER)
-    monkeypatch.setattr(model_store, "explainer", shap.TreeExplainer(model))
+    monkeypatch.setattr(model_store, "explainer", explainer)
 
     app_module.app.config["TESTING"] = True
     with app_module.app.test_client() as c:

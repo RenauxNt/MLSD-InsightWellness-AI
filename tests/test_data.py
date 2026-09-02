@@ -26,9 +26,17 @@ def test_knowledge_base_documents_exist():
         assert chunks, f"{path.name} produces no indexable chunks"
 
 
-def test_params_yaml_parses():
+def test_params_yaml_matches_config():
+    """params.yaml mirrors config.py for the notebooks; pin the shared values."""
     params = yaml.safe_load((REPO_ROOT / "params.yaml").read_text(encoding="utf-8"))
     assert isinstance(params, dict) and params
+
+    assert params["split"]["target"] == config.TARGET
+    assert params["split"]["test_size"] == config.TEST_SIZE
+    assert params["split"]["random_state"] == config.RANDOM_STATE
+    assert params["train"]["n_estimators"] == config.TRAIN_CONFIG["n_estimators"]
+    assert params["train"]["random_state"] == config.TRAIN_CONFIG["random_state"]
+    assert params["train"]["param_grid"] == config.TRAIN_CONFIG["param_grid"]
 
 
 def test_config_values_are_sane():
@@ -42,3 +50,19 @@ def test_class_mapping_is_complete():
     """The API translates model output codes 0-6; all 7 classes must exist."""
     assert sorted(CLASS_MAPPING.keys()) == list(range(7))
     assert len(set(CLASS_MAPPING.values())) == 7
+
+
+def test_dashboard_constants_match_api_schema():
+    """The dashboard container has no installed package, so it carries
+    copies of the API constants — this test keeps them honest."""
+    from insightwellness_ai.api import schema
+    from insightwellness_ai.dashboard import streamlit_app
+
+    assert streamlit_app.CLASS_MAPPING == schema.CLASS_MAPPING
+    assert streamlit_app.FEATURE_ORDER == list(schema.EXPECTED_MODEL_SCHEMA)
+    assert streamlit_app.MTRANS_FEATURES == schema.MTRANS_FEATURES
+    for feature, spec in schema.EXPECTED_MODEL_SCHEMA.items():
+        if isinstance(spec["valid_values"], list):
+            assert (
+                list(streamlit_app.CATEGORICAL_OPTIONS[feature]) == spec["valid_values"]
+            ), f"dashboard options for {feature} drifted from the API schema"

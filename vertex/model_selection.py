@@ -1,4 +1,5 @@
-from kfp.dsl import component, Input, Output, Dataset, Artifact, Metrics
+from kfp.dsl import Artifact, Dataset, Input, Metrics, Output, component
+
 from insightwellness_ai.config import BASE_IMAGE
 
 
@@ -8,10 +9,11 @@ def model_selection(
     best_params: Output[Artifact],
     metrics: Output[Metrics],
 ):
-    import pandas as pd
     import json
 
-    from insightwellness_ai.config import TRAIN_CONFIG, TARGET
+    import pandas as pd
+
+    from insightwellness_ai.config import TARGET, TRAIN_CONFIG
     from insightwellness_ai.pipeline.model_selection import select_model
 
     N_ESTIMATORS = TRAIN_CONFIG["n_estimators"]

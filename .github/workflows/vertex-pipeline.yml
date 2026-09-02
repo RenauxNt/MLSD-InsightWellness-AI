@@ -13,7 +13,6 @@ on:
       - 'insightwellness_ai/config.py'
       - 'insightwellness_ai/pipeline/**'
       - 'Dockerfile.vertex'
-      - 'params.yaml'
 
 jobs:
   tests:

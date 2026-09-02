@@ -40,9 +40,8 @@ on:
         default: /
       concurrency:
         description: >-
-          Max concurrent requests per instance. Must match what the
-          container can actually work on in parallel (gunicorn
-          workers x threads), otherwise Cloud Run queues requests
+          Max concurrent requests per instance; must match the container's
+          real capacity (gunicorn workers x threads) or Cloud Run queues
           instead of scaling out. Empty keeps the platform default.
         required: false
         type: string
