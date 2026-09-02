@@ -1,11 +1,15 @@
+"""In-memory Chroma RAG over data/*.md, indexed lazily on first query."""
+
 import os
+
 import chromadb
 
-chroma_client = chromadb.Client()
-collection = chroma_client.create_collection(name="health_knowledge")
+from insightwellness_ai.api.schema import CLASS_MAPPING
+
+_collection = None
 
 
-def load_documents(directory):
+def _load_documents(collection, directory):
     documents = []
     metadatas = []
     ids = []
@@ -27,27 +31,25 @@ def load_documents(directory):
     print(f"Loaded {len(documents)} chunks from {directory}")
 
 
-load_documents("data/")
+def _get_collection():
+    global _collection
+    if _collection is None:
+        client = chromadb.Client()
+        _collection = client.get_or_create_collection(name="health_knowledge")
+        _load_documents(_collection, os.environ.get("KNOWLEDGE_DIR") or "data/")
+    return _collection
 
 
 def search_knowledge_base(query: str) -> str:
     """Semantic search over obesity knowledge"""
 
-    obesity_classes = [
-        "Insufficient_Weight",
-        "Normal_Weight",
-        "Overweight_Level_I",
-        "Overweight_Level_II",
-        "Obesity_Type_I",
-        "Obesity_Type_II",
-        "Obesity_Type_III",
-    ]
-
-    if query in obesity_classes:
+    if query in set(CLASS_MAPPING.values()):
         query = f"{query} BMI category definition obesity class"
 
-    results = collection.query(query_texts=[query], n_results=3)
+    results = _get_collection().query(query_texts=[query], n_results=3)
     formatted = []
-    for doc, metadata in zip(results["documents"][0], results["metadatas"][0]):
+    for doc, metadata in zip(
+        results["documents"][0], results["metadatas"][0], strict=True
+    ):
         formatted.append(f"[Source: {metadata['source']}]\n{doc}")
     return "\n\n---\n\n".join(formatted)

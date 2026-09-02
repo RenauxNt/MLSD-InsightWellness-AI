@@ -1,29 +1,12 @@
 import requests
 
-API_BASE_URL = "https://insightwellness-api-545205658175.europe-west1.run.app"
+from insightwellness_ai.api.schema import MTRANS_FEATURES
+from insightwellness_ai.config import API_BASE_URL
+
 PREDICT_URL = f"{API_BASE_URL}/predict"
 EXPLAIN_URL = f"{API_BASE_URL}/explain"
 
-# Default valid baseline input
-DEFAULT_INPUT = {
-    "Gender": 0,
-    "Age": 25,
-    "family_history_with_overweight": 0,
-    "FAVC": 0,
-    "FCVC": 2,
-    "NCP": 3,
-    "CAEC": 1,
-    "SMOKE": 0,
-    "CH2O": 2,
-    "SCC": 0,
-    "FAF": 1,
-    "TUE": 1,
-    "CALC": 1,
-    "MTRANS_automobile": 1,
-    "MTRANS_motorbike": 0,
-    "MTRANS_bike": 0,
-    "MTRANS_walking": 0,
-}
+_session = requests.Session()
 
 FEATURE_LABELS = {
     "Gender": "Gender",
@@ -68,7 +51,7 @@ def _build_payload(
     CALC: int,
     MTRANS: str,
 ) -> dict:
-    data = DEFAULT_INPUT.copy()
+    data = {}
     data.update(
         {
             "Age": Age,
@@ -89,12 +72,7 @@ def _build_payload(
         }
     )
 
-    mtrans_map = {
-        "automobile": "MTRANS_automobile",
-        "motorbike": "MTRANS_motorbike",
-        "bike": "MTRANS_bike",
-        "walking": "MTRANS_walking",
-    }
+    mtrans_map = {col.removeprefix("MTRANS_"): col for col in MTRANS_FEATURES}
     for key in mtrans_map.values():
         data[key] = 0
     if isinstance(MTRANS, str):
@@ -156,7 +134,7 @@ def predict_obesity_risk(
     )
 
     try:
-        response = requests.post(PREDICT_URL, json=data, timeout=60)
+        response = _session.post(PREDICT_URL, json=data, timeout=60)
         response.raise_for_status()
         result = response.json()
         return f"Predicted obesity level: {result.get('prediction', 'unknown')}"
@@ -212,7 +190,7 @@ def explain_obesity_risk(
     )
 
     try:
-        response = requests.post(
+        response = _session.post(
             EXPLAIN_URL, json=data, params={"top_n": 5}, timeout=60
         )
         response.raise_for_status()

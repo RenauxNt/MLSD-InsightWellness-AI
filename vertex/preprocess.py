@@ -1,4 +1,5 @@
-from kfp.dsl import component, Input, Output, Dataset
+from kfp.dsl import Dataset, Input, Output, component
+
 from insightwellness_ai.config import BASE_IMAGE
 
 
@@ -8,12 +9,13 @@ def preprocess(
     train_dataset: Output[Dataset],
     test_dataset: Output[Dataset],
 ):
-    import os
-    import pandas as pd
     import logging
+    import os
 
-    from insightwellness_ai.preprocess import preprocess_data
-    from insightwellness_ai.config import TEST_SIZE, RANDOM_STATE, STRATIFY
+    import pandas as pd
+
+    from insightwellness_ai.config import RANDOM_STATE, STRATIFY, TEST_SIZE
+    from insightwellness_ai.pipeline.preprocess import preprocess_data
 
     logging.basicConfig(
         level=logging.INFO,

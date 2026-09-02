@@ -13,4 +13,4 @@ COPY insightwellness_ai/ ./insightwellness_ai/
 
 ENV PORT=8501
 
-CMD streamlit run insightwellness_ai/streamlit_app.py --server.port $PORT --server.address=0.0.0.0 --server.headless=true
+CMD streamlit run insightwellness_ai/dashboard/streamlit_app.py --server.port $PORT --server.address=0.0.0.0 --server.headless=true

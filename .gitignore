@@ -6,3 +6,5 @@ __pycache__
 .ruff_cache
 *.json
 insightwellness_ai.egg-info
+milestones/ms4_progress.md
+.coverage

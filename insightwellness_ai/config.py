@@ -1,7 +1,20 @@
-PROJECT_ID = "mlsd-487610"
-BUCKET_NAME = "mlops-2026-ramzan1"
+import os
 
-RAW_DATA = "gs://mlops-2026-ramzan1/raw/data_raw.csv"
+# `or` (not a get() default) so an empty env var also falls back
+PROJECT_ID = os.environ.get("GCP_PROJECT_ID") or "mlsd-487610"
+BUCKET_NAME = os.environ.get("GCS_BUCKET") or "mlops-2026-ramzan1"
+LOCATION = os.environ.get("GCP_REGION") or "europe-west1"
+
+RAW_DATA = f"gs://{BUCKET_NAME}/raw/data_raw.csv"
+
+# written by vertex/training.py, read by api/model_store.py
+MODEL_BLOB = "models/model.joblib"
+MODEL_URI = f"gs://{BUCKET_NAME}/{MODEL_BLOB}"
+
+API_BASE_URL = (
+    os.environ.get("INSIGHTWELLNESS_API_URL")
+    or "https://insightwellness-api-545205658175.europe-west1.run.app"
+)
 
 TARGET = "Obesity"
 TEST_SIZE = 0.2
@@ -18,11 +31,8 @@ TRAIN_CONFIG = {
 }
 
 PIPELINE_ROOT = f"gs://{BUCKET_NAME}/pipeline-root"
-LOCATION = "europe-west1"
 
 BQ_DATASET = "obesity_dataset"
-BQ_TRAIN_TABLE = "train_table"
-BQ_TEST_TABLE = "test_table"
 BQ_RAW_TABLE = "raw"
 
 BASE_IMAGE = f"{LOCATION}-docker.pkg.dev/{PROJECT_ID}/vertex-ai-pipeline-example/pipeline-base:latest"

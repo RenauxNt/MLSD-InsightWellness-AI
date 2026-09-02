@@ -1,4 +1,5 @@
-from kfp.dsl import component, Input, Output, Dataset, Model, Metrics, Artifact
+from kfp.dsl import Artifact, Dataset, Input, Metrics, Model, Output, component
+
 from insightwellness_ai.config import BASE_IMAGE
 
 
@@ -10,14 +11,15 @@ def evaluation(
     confusion_matrix_artifact: Output[Artifact],
     report_artifact: Output[Artifact],
 ):
-    import pandas as pd
-    import joblib
-    import matplotlib.pyplot as plt
     import json
     import os
 
+    import joblib
+    import matplotlib.pyplot as plt
+    import pandas as pd
+
     from insightwellness_ai.config import TARGET
-    from insightwellness_ai.evaluation import evaluate_model
+    from insightwellness_ai.pipeline.evaluation import evaluate_model
 
     df = pd.read_parquet(test_dataset.path)
     X_test = df.drop(columns=[TARGET])

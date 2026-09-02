@@ -1,4 +1,5 @@
-from kfp.dsl import component, Input, Output, Dataset, Artifact, Model
+from kfp.dsl import Artifact, Dataset, Input, Model, Output, component
+
 from insightwellness_ai.config import BASE_IMAGE
 
 
@@ -8,14 +9,15 @@ def training(
     best_params: Input[Artifact],
     model: Output[Model],
 ):
-    import pandas as pd
-    import joblib
     import json
     import os
+
+    import joblib
+    import pandas as pd
     from google.cloud import storage
 
-    from insightwellness_ai.config import TRAIN_CONFIG, TARGET, BUCKET_NAME
-    from insightwellness_ai.training import train_model
+    from insightwellness_ai.config import BUCKET_NAME, MODEL_BLOB, TARGET, TRAIN_CONFIG
+    from insightwellness_ai.pipeline.training import train_model
 
     N_ESTIMATORS = TRAIN_CONFIG["n_estimators"]
     RANDOM_STATE = TRAIN_CONFIG["random_state"]
@@ -24,7 +26,7 @@ def training(
     X_train = df.drop(columns=[TARGET])
     y_train = df[TARGET]
 
-    with open(best_params.path, "r") as f:
+    with open(best_params.path) as f:
         params = json.load(f)
 
     clf = train_model(X_train, y_train, params, N_ESTIMATORS, RANDOM_STATE)
@@ -36,5 +38,5 @@ def training(
 
     client = storage.Client()
     bucket = client.bucket(BUCKET_NAME)
-    blob = bucket.blob("models/model.joblib")
+    blob = bucket.blob(MODEL_BLOB)
     blob.upload_from_filename(local_model_file)

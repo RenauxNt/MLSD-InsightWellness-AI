@@ -1,0 +1,91 @@
+"""API test fixtures. The app is imported with GCS blocked — the real
+model load would need credentials in CI; tests use a stand-in model."""
+
+from unittest.mock import patch
+
+import numpy as np
+import pandas as pd
+import pytest
+import shap
+from sklearn.ensemble import HistGradientBoostingClassifier
+
+with patch("gcsfs.GCSFileSystem", side_effect=RuntimeError("gcs disabled in tests")):
+    from insightwellness_ai.api import app as app_module
+    from insightwellness_ai.api import model_store
+
+FEATURE_ORDER = [
+    "Gender",
+    "Age",
+    "family_history_with_overweight",
+    "FAVC",
+    "FCVC",
+    "NCP",
+    "CAEC",
+    "SMOKE",
+    "CH2O",
+    "SCC",
+    "FAF",
+    "TUE",
+    "CALC",
+    "MTRANS_automobile",
+    "MTRANS_motorbike",
+    "MTRANS_bike",
+    "MTRANS_walking",
+]
+
+VALID_PAYLOAD = {
+    "Gender": 1,
+    "Age": 25.5,
+    "family_history_with_overweight": 1,
+    "FAVC": 1,
+    "FCVC": 2,
+    "NCP": 3,
+    "CAEC": 1,
+    "SMOKE": 0,
+    "CH2O": 2,
+    "SCC": 0,
+    "FAF": 1,
+    "TUE": 1,
+    "CALC": 1,
+    "MTRANS_automobile": 1,
+    "MTRANS_motorbike": 0,
+    "MTRANS_bike": 0,
+    "MTRANS_walking": 0,
+}
+
+
+@pytest.fixture
+def feature_order():
+    return list(FEATURE_ORDER)
+
+
+@pytest.fixture
+def valid_payload():
+    return dict(VALID_PAYLOAD)
+
+
+@pytest.fixture(scope="session")
+def _stand_in_artifacts():
+    """Stand-in model + explainer, built once per test run."""
+    rng = np.random.default_rng(42)
+    n = 200
+    X = pd.DataFrame({col: rng.integers(0, 4, size=n) for col in FEATURE_ORDER})
+    X["Age"] = rng.uniform(15, 70, size=n)
+    X = X[FEATURE_ORDER]
+    y = rng.integers(0, 7, size=n)
+
+    model = HistGradientBoostingClassifier(max_iter=5, max_depth=2, random_state=0)
+    model.fit(X, y)
+    return model, shap.TreeExplainer(model)
+
+
+@pytest.fixture
+def client(monkeypatch, _stand_in_artifacts):
+    model, explainer = _stand_in_artifacts
+    monkeypatch.setattr(model_store, "model", model)
+    monkeypatch.setattr(model_store, "FEATURE_ORDER", FEATURE_ORDER)
+    monkeypatch.setattr(model_store, "explainer", explainer)
+
+    app_module.app.config["TESTING"] = True
+    with app_module.app.test_client() as c:
+        yield c

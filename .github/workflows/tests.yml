@@ -1,0 +1,34 @@
+name: Tests
+
+# Reusable quality gate: called by ci.yml (on PRs), deploy.yml and
+# vertex-pipeline.yml (before anything is deployed).
+
+on:
+  workflow_call:
+
+jobs:
+  quality:
+    name: Lint & tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install uv
+          uv sync --dev
+          uv pip install -e .
+
+      - name: Run pre-commit hooks
+        run: uv run pre-commit run --all-files
+
+      - name: Run tests with coverage
+        run: uv run pytest tests/ --cov=insightwellness_ai --cov-report=term-missing

@@ -1,22 +1,29 @@
 from agno.agent import Agent
-from agno.team import Team
 from agno.models.google import Gemini
+from agno.team import Team
 from agno.tools.duckduckgo import DuckDuckGoTools
 
-from model_tool import explain_obesity_risk, predict_obesity_risk
-from rag_agent import search_knowledge_base
+from insightwellness_ai.agents.model_tool import (
+    explain_obesity_risk,
+    predict_obesity_risk,
+)
+from insightwellness_ai.agents.rag_agent import search_knowledge_base
+from insightwellness_ai.config import LOCATION, PROJECT_ID
 
 
-PROJECT_ID = "mlsd-487610"
-
-ml_agent = Agent(
-    name="Obesity Predictor",
-    model=Gemini(
+def _gemini() -> Gemini:
+    """Shared model config for all agents and the coordinator."""
+    return Gemini(
         id="gemini-2.5-flash",
         vertexai=True,
         project_id=PROJECT_ID,
-        location="europe-west1",
-    ),
+        location=LOCATION,
+    )
+
+
+ml_agent = Agent(
+    name="Obesity Predictor",
+    model=_gemini(),
     tools=[predict_obesity_risk],
     instructions="""
 You are an obesity prediction model.
@@ -31,12 +38,7 @@ RULES:
 
 explain_agent = Agent(
     name="Explainability Expert",
-    model=Gemini(
-        id="gemini-2.5-flash",
-        vertexai=True,
-        project_id=PROJECT_ID,
-        location="europe-west1",
-    ),
+    model=_gemini(),
     tools=[explain_obesity_risk],
     instructions="""
 You are a SHAP explainability expert.
@@ -51,12 +53,7 @@ RULES:
 
 rag_agent = Agent(
     name="Health Knowledge Expert",
-    model=Gemini(
-        id="gemini-2.5-flash",
-        vertexai=True,
-        project_id=PROJECT_ID,
-        location="europe-west1",
-    ),
+    model=_gemini(),
     tools=[search_knowledge_base],
     instructions="""
 You are a scientific health researcher.
@@ -82,12 +79,7 @@ Focus on:
 
 web_agent = Agent(
     name="Web Researcher",
-    model=Gemini(
-        id="gemini-2.5-flash",
-        vertexai=True,
-        project_id=PROJECT_ID,
-        location="europe-west1",
-    ),
+    model=_gemini(),
     tools=[DuckDuckGoTools()],
     instructions="""
 You are a web research assistant.
@@ -106,12 +98,7 @@ Keep responses short and factual.
 team = Team(
     name="InsightWellness Team",
     mode="coordinate",
-    model=Gemini(
-        id="gemini-2.5-flash",
-        vertexai=True,
-        project_id=PROJECT_ID,
-        location="europe-west1",
-    ),
+    model=_gemini(),
     members=[ml_agent, explain_agent, rag_agent, web_agent],
     instructions="""
 You are a strict orchestrator.

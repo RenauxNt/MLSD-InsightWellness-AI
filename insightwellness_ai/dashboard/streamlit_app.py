@@ -6,26 +6,31 @@ Three pages:
 - Data exploration: shows distributions of each feature and overlays
   the user's last submitted values for context.
 - Ask the team: chat with the multi-agent team (predictor + RAG + web)
-  via the deployed agents service (/ask).
+  via the API's /chat endpoint. Memory is client-side (see call_agents).
 
 Run locally with:
-    streamlit run insightwellness_ai/streamlit_app.py
+    streamlit run insightwellness_ai/dashboard/streamlit_app.py
 """
 
 import os
+import re
 
 import gcsfs
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import requests
 import streamlit as st
 
-DATA_PATH = "gs://mlops-2026-ramzan1/preprocessed/data_preprocessed.csv"
+GCS_BUCKET = os.environ.get("GCS_BUCKET") or "mlops-2026-ramzan1"
+DATA_PATH = (
+    os.environ.get("DATA_PATH")
+    or f"gs://{GCS_BUCKET}/preprocessed/data_preprocessed.csv"
+)
 DEFAULT_API_URL = os.environ.get(
     "INSIGHTWELLNESS_API_URL",
     "https://insightwellness-api-545205658175.europe-west1.run.app",
 )
-DEFAULT_AGENTS_URL = os.environ.get("INSIGHTWELLNESS_AGENTS_URL", "")
 
 CLASS_MAPPING = {
     0: "Insufficient_Weight",
@@ -105,13 +110,13 @@ CATEGORICAL_OPTIONS = {
 }
 
 MTRANS_FEATURES = [f for f in FEATURE_ORDER if f.startswith("MTRANS_")]
+# code 0 = public transport = no one-hot column set
 MTRANS_LABEL_TO_KEY = {
-    "Public transportation": None,
-    "Automobile": "MTRANS_automobile",
-    "Motorbike": "MTRANS_motorbike",
-    "Bike": "MTRANS_bike",
-    "Walking": "MTRANS_walking",
+    label: (MTRANS_FEATURES[code - 1] if code else None)
+    for code, label in CATEGORICAL_OPTIONS["MTRANS"].items()
 }
+
+TEMPLATE = "plotly_white"
 
 
 @st.cache_data(show_spinner="Loading dataset from GCS...")
@@ -121,23 +126,59 @@ def load_dataset(path: str) -> pd.DataFrame:
         return pd.read_csv(f)
 
 
-def call_api(endpoint: str, payload: dict, params: dict | None = None) -> dict:
+_session = requests.Session()
+
+
+def call_api(
+    endpoint: str, payload: dict, params: dict | None = None, timeout: int = 30
+) -> dict:
     url = f"{DEFAULT_API_URL.rstrip('/')}/{endpoint.lstrip('/')}"
-    response = requests.post(url, json=payload, params=params, timeout=30)
+    response = _session.post(url, json=payload, params=params, timeout=timeout)
     response.raise_for_status()
     return response.json()
 
 
-def call_agents(question: str) -> str:
-    if not DEFAULT_AGENTS_URL:
-        raise RuntimeError(
-            "INSIGHTWELLNESS_AGENTS_URL is not set — deploy the agents service "
-            "and export the URL before using this page."
+SUMMARY_PREFIX = "SUMMARY:"
+
+
+def call_agents(question: str, summaries: list[str]) -> tuple[str, str]:
+    """Ask the team one question. /chat is stateless: each reply opens with
+    a SUMMARY line, stripped here and fed back on the next question.
+    Returns (visible_answer, summary)."""
+    prompt = ""
+    if summaries:
+        prompt += (
+            "Context — summaries of the earlier exchanges in this "
+            "conversation, oldest first (not visible to the user):\n"
+            + "\n".join(f"- {s}" for s in summaries)
+            + "\n\n"
         )
-    url = f"{DEFAULT_AGENTS_URL.rstrip('/')}/ask"
-    response = requests.post(url, json={"question": question}, timeout=120)
-    response.raise_for_status()
-    return response.json().get("answer", "")
+    prompt += (
+        f"Start your reply with a single line '{SUMMARY_PREFIX} <one short "
+        "sentence summarising this question and your answer>'. That line is "
+        "stripped before the user sees the reply; everything after it is "
+        "shown verbatim.\n\n"
+        f"User question: {question}"
+    )
+    answer = call_api("chat", {"question": prompt}, timeout=120).get("answer", "")
+
+    summary = None
+    kept_lines = []
+    for line in answer.splitlines():
+        if summary is None and line.strip().startswith(SUMMARY_PREFIX):
+            # agents may cram the answer onto the SUMMARY line: keep the
+            # first sentence, give back the rest
+            content = line.strip()[len(SUMMARY_PREFIX) :].strip()
+            parts = re.split(r"(?<=[.!?])\s*(?=[A-Z*#-])", content, maxsplit=1)
+            summary = parts[0][:200]
+            if len(parts) > 1 and parts[1]:
+                kept_lines.append(parts[1])
+        else:
+            kept_lines.append(line)
+    if summary is None:
+        # Agent ignored the format — fall back to remembering the question.
+        summary = f"User asked: {question[:120]}"
+    return "\n".join(kept_lines).strip(), summary
 
 
 def render_sidebar() -> str:
@@ -258,37 +299,66 @@ def page_prediction() -> None:
     inputs = render_input_form()
     st.session_state["last_inputs"] = inputs
 
-    cols = st.columns([1, 1, 4])
-    with cols[0]:
-        run_predict = st.button("Predict", type="primary")
-    with cols[1]:
-        run_explain = st.button("Predict + Explain (SHAP)")
-
-    if run_predict:
-        try:
-            result = call_api("predict", inputs)
-            st.success(f"Predicted class: **{result['prediction']}**")
-            with st.expander("Raw response"):
-                st.json(result)
-        except requests.exceptions.RequestException as e:
-            st.error(f"API request failed: {e}")
-
-    if run_explain:
+    if st.button("Predict", type="primary"):
         try:
             result = call_api("explain", inputs, params={"top_n": 5})
-            st.success(f"Predicted class: **{result['prediction']}**")
-            if result.get("probabilities"):
-                render_probabilities(result["probabilities"])
-            drivers = result.get("explanation", {}).get("top_drivers", [])
-            if drivers:
-                render_shap_drivers(drivers)
-            with st.expander("Raw response"):
-                st.json(result)
         except requests.exceptions.RequestException as e:
             st.error(f"API request failed: {e}")
+            return
+
+        # neutral on purpose: report the model's output, don't color-judge it
+        st.markdown(f"### Predicted class: {result['prediction']}")
+        render_whatif_comparison(inputs, result["prediction"])
+        st.session_state["last_prediction"] = {
+            "inputs": inputs,
+            "prediction": result["prediction"],
+        }
+        if result.get("probabilities"):
+            render_probabilities(result["probabilities"])
+        drivers = result.get("explanation", {}).get("top_drivers", [])
+        if drivers:
+            render_shap_drivers(drivers)
+        with st.expander("Raw response"):
+            st.json(result)
 
 
-def build_distribution_plot(df: pd.DataFrame, feature: str, user_value, template: str):
+def _format_value(feature: str, value) -> str:
+    options = CATEGORICAL_OPTIONS.get(feature)
+    if options is not None:
+        return options.get(int(round(value)), str(value))
+    return f"{value:g}"
+
+
+def render_whatif_comparison(inputs: dict, prediction: str) -> None:
+    """Diff against the previous submission: change a habit, see the effect."""
+    prev = st.session_state.get("last_prediction")
+    if prev is None or prev["inputs"] == inputs:
+        return
+
+    changes = [
+        f"{FEATURE_LABELS.get(f, f)}: "
+        f"{_format_value(f, prev['inputs'][f])} → {_format_value(f, inputs[f])}"
+        for f in FEATURE_ORDER
+        if prev["inputs"].get(f) != inputs.get(f)
+    ]
+    if prev["prediction"] != prediction:
+        st.info(
+            f"**What-if:** your previous submission was "
+            f"**{prev['prediction']}** — with "
+            + "; ".join(changes)
+            + f", the prediction moved to **{prediction}**."
+        )
+    else:
+        st.info(
+            "**What-if:** still **"
+            + prediction
+            + "** despite changing "
+            + "; ".join(changes)
+            + "."
+        )
+
+
+def build_distribution_plot(df: pd.DataFrame, feature: str, user_value):
     label_map = CATEGORICAL_OPTIONS.get(feature)
     friendly = FEATURE_LABELS.get(feature, feature)
 
@@ -306,7 +376,7 @@ def build_distribution_plot(df: pd.DataFrame, feature: str, user_value, template
             counts,
             x="label",
             y="count",
-            template=template,
+            template=TEMPLATE,
             title=f"Distribution of {friendly}",
             labels={"label": friendly, "count": "Count"},
             category_orders={"label": category_order},
@@ -326,7 +396,7 @@ def build_distribution_plot(df: pd.DataFrame, feature: str, user_value, template
                 x=0.5,
                 y=1.08,
                 showarrow=False,
-                font=dict(color="#e6550d"),
+                font={"color": "#e6550d"},
             )
         return fig
 
@@ -335,7 +405,7 @@ def build_distribution_plot(df: pd.DataFrame, feature: str, user_value, template
         df,
         x=feature,
         nbins=40,
-        template=template,
+        template=TEMPLATE,
         title=f"Distribution of {friendly}",
         labels={feature: friendly},
     )
@@ -362,7 +432,6 @@ def page_exploration() -> None:
     st.title("Data exploration")
     df = load_dataset(DATA_PATH)
 
-    template = "plotly_white"
     user_inputs = st.session_state.get("last_inputs")
 
     with st.expander("Preview the dataset"):
@@ -376,7 +445,7 @@ def page_exploration() -> None:
         class_counts,
         x="class",
         y="count",
-        template=template,
+        template=TEMPLATE,
         title="Obesity class balance",
         category_orders={"class": class_order},
     )
@@ -420,13 +489,14 @@ def page_exploration() -> None:
         format_func=lambda f: FEATURE_LABELS.get(f, f),
     )
     if feature == "MTRANS":
-        plot_df = plot_df.copy()
-        plot_df["MTRANS"] = plot_df[MTRANS_FEATURES].apply(_transport_code, axis=1)
+        onehots = plot_df[MTRANS_FEATURES].to_numpy() >= 0.5
+        codes = np.where(onehots.any(axis=1), onehots.argmax(axis=1) + 1, 0)
+        plot_df = plot_df.assign(MTRANS=codes)
         user_value = _transport_code(user_inputs) if user_inputs else None
     else:
         user_value = user_inputs.get(feature) if user_inputs else None
     st.plotly_chart(
-        build_distribution_plot(plot_df, feature, user_value, template),
+        build_distribution_plot(plot_df, feature, user_value),
         width="stretch",
     )
 
@@ -439,14 +509,8 @@ def page_ask_team() -> None:
         "agent for external context."
     )
 
-    if not DEFAULT_AGENTS_URL:
-        st.warning(
-            "Agents service URL is not configured. Set the "
-            "`INSIGHTWELLNESS_AGENTS_URL` environment variable to the deployed "
-            "service (e.g. `https://insightwellness-agents-…run.app`)."
-        )
-
     history = st.session_state.setdefault("chat_history", [])
+    summaries = st.session_state.setdefault("chat_summaries", [])
 
     last_inputs = st.session_state.get("last_inputs")
     if last_inputs and not history:
@@ -478,7 +542,9 @@ def page_ask_team() -> None:
     with st.chat_message("assistant"):
         with st.spinner("The team is thinking…"):
             try:
-                answer = call_agents(question)
+                answer, summary = call_agents(question, summaries)
+                summaries.append(summary)
+                del summaries[:-10]  # keep the hidden context bounded
             except (requests.exceptions.RequestException, RuntimeError) as e:
                 answer = f"Agents request failed: {e}"
         st.markdown(answer)
